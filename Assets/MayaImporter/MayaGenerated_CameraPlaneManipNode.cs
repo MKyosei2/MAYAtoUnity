@@ -1,0 +1,30 @@
+// NodeType: cameraPlaneManip (Phase C: non-empty decode)
+
+using UnityEngine;
+using MayaImporter;
+using MayaImporter.Core;
+
+namespace MayaImporter.Generated
+{
+    [DisallowMultipleComponent]
+    [MayaNodeType("cameraPlaneManip")]
+    public sealed class MayaGenerated_CameraPlaneManipNode : MayaPhaseCNodeBase
+    {
+        [Header("Decoded (cameraPlaneManip)")]
+        [SerializeField] private bool enabled = true;
+        [SerializeField] private float width;
+        [SerializeField] private float height;
+
+        protected override void DecodePhaseC(MayaImportOptions options, MayaImportLog log)
+        {
+            bool muted = ReadBool(false, ".mute", "mute", ".disabled", "disabled");
+            bool explicitEnabled = ReadBool(true, ".enabled", "enabled", ".enable", "enable");
+            enabled = !muted && explicitEnabled;
+
+            width = ReadFloat(0f, ".width", "width", ".w", "w");
+            height = ReadFloat(0f, ".height", "height", ".h", "h");
+
+            SetNotes($"{NodeType} '{NodeName}' decoded: enabled={enabled}, width={width}, height={height}");
+        }
+    }
+}
