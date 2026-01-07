@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 using UnityEngine.Animations;
 
@@ -5,7 +6,7 @@ namespace MayaImporter.Core
 {
     /// <summary>
     /// ConstraintUpdater:
-    /// Prefabロード後、各Constraintを一度強制更新して座標整合を取る。
+    /// Prefab[hAeConstraintxXVﾄ晃B
     /// </summary>
     [DefaultExecutionOrder(-600)]
     public sealed class MayaRuntimeConstraintUpdater : MonoBehaviour

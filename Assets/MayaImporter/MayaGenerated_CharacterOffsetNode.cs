@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // NodeType: characterOffset (Phase C: non-empty decode)
 
 using UnityEngine;

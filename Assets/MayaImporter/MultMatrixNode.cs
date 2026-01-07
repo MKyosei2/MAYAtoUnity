@@ -1,5 +1,5 @@
-﻿// Assets/MayaImporter/MultMatrixNode.cs
-// Phase C placeholder -> implemented
+// Assets/MayaImporter/MultMatrixNode.cs
+// Production implementation
 //
 // NodeType: multMatrix
 // - Collects matrixIn[i] from setAttr and from incoming connections (best-effort)

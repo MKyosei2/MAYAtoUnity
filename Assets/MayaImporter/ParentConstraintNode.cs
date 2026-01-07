@@ -1,9 +1,11 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 ﻿using System.Globalization;
 using System.Collections.Generic;
 using UnityEngine;
 using MayaImporter.Core;
 using MayaImporter.Components;
 using MayaImporter.Constraints;
+using System.Text.RegularExpressions;
 
 namespace MayaImporter.Animation
 {
@@ -454,5 +456,290 @@ namespace MayaImporter.Animation
 
         private T GetOrAdd<T>() where T : Component
             => GetComponent<T>() ?? gameObject.AddComponent<T>();
+    }
+}
+
+
+// ----------------------------------------------------------------------------- 
+// INTEGRATED: ParentConstraintBuilder.cs, ParentConstraintEvalNode.cs
+// -----------------------------------------------------------------------------
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+
+namespace MayaImporter.Phase3.Evaluation
+{
+    public static class ParentConstraintBuilder
+    {
+        // Mayȃ\Iȃ^[QbǵiꂪĂ΁u^[Qbgڑvj
+        private static readonly Regex TargetInputRegex =
+            new Regex(@"^target\[(?<i>\d+)\]\.(targetParentMatrix|targetTranslate|targetRotate|targetScale|targetParent)", RegexOptions.Compiled);
+
+        // Mayȃ\IȃEFCǵiꂪĂ΁uEFCgڑvj
+        private static readonly Regex TargetWeightRegex =
+            new Regex(@"^target\[(?<i>\d+)\]\.(targetWeight|targetWeight\[\d+\]|targetWeightValue|targetWeight)", RegexOptions.Compiled);
+
+        // ܂ w0 / w1 ̂悤ȃGCAXP[X̕ی
+        private static readonly Regex AliasWRegex =
+            new Regex(@"^w(?<i>\d+)$", RegexOptions.Compiled);
+
+        public static ParentConstraintEvalNode Build(
+            MayaNode constraintNode,
+            MayaScene scene)
+        {
+            var constrainedName = FindConstrained(constraintNode, scene);
+            if (constrainedName == null) return null;
+
+            var constrainedGo = GameObject.Find(constrainedName);
+            if (constrainedGo == null) return null;
+
+            var constrainedTf = constrainedGo.transform;
+
+            bool maintainOffset = GetBool(constraintNode, "maintainOffset");
+
+            // -----------------------------
+            // 1) target[index]  targetNodeName  attribute Ō
+            // -----------------------------
+            var targetByIndex = new Dictionary<int, string>();
+            foreach (var c in scene.ConnectionGraph.Connections)
+            {
+                if (c.DstNode != constraintNode.NodeName) continue;
+                if (string.IsNullOrEmpty(c.DstAttr)) continue;
+
+                var m = TargetInputRegex.Match(c.DstAttr);
+                if (!m.Success) continue;
+
+                if (!int.TryParse(m.Groups["i"].Value, out int idx)) continue;
+
+                var src = scene.GetNode(c.SrcNode);
+                if (src == null) continue;
+
+                // ^[Qbg͒ʏ transform/joint
+                if (src.NodeType != "transform" && src.NodeType != "joint") continue;
+
+                if (!targetByIndex.ContainsKey(idx))
+                    targetByIndex[idx] = c.SrcNode;
+            }
+
+            if (targetByIndex.Count == 0)
+                return null;
+
+            // index Ŋm
+            var indices = new List<int>(targetByIndex.Keys);
+            indices.Sort();
+
+            // -----------------------------
+            // 2) weight[index]  attribute ŌianimCurveڑj
+            // -----------------------------
+            var weightNodeByIndex = new Dictionary<int, WeightEvalNode>();
+            foreach (var c in scene.ConnectionGraph.Connections)
+            {
+                if (c.DstNode != constraintNode.NodeName) continue;
+                if (string.IsNullOrEmpty(c.DstAttr)) continue;
+
+                int idx = -1;
+
+                // target[i].targetWeight n
+                var mw = TargetWeightRegex.Match(c.DstAttr);
+                if (mw.Success && int.TryParse(mw.Groups["i"].Value, out int wi))
+                    idx = wi;
+
+                // w0 / w1 nGCAX
+                if (idx < 0)
+                {
+                    var ma = AliasWRegex.Match(c.DstAttr);
+                    if (ma.Success && int.TryParse(ma.Groups["i"].Value, out int ai))
+                        idx = ai;
+                }
+
+                if (idx < 0) continue;
+
+                var src = scene.GetNode(c.SrcNode);
+                if (src == null) continue;
+
+                if (!string.IsNullOrEmpty(src.NodeType) && src.NodeType.StartsWith("animCurve"))
+                {
+                    // ɓo^ς݂Ȃ㏑Ȃiڑ̖̎h~j
+                    if (!weightNodeByIndex.ContainsKey(idx))
+                        weightNodeByIndex[idx] = new WeightEvalNode(src);
+                }
+            }
+
+            // -----------------------------
+            // 3) EvalNode \zitargets / offsets / weightsj
+            // -----------------------------
+            var targets = new List<Transform>();
+            var offsets = new List<Matrix4x4>();
+            var weightNodes = new List<WeightEvalNode>();
+            var defaultWeights = new List<float>();
+
+            foreach (var idx in indices)
+            {
+                var tName = targetByIndex[idx];
+                var go = GameObject.Find(tName);
+                if (go == null) continue;
+
+                var tf = go.transform;
+                targets.Add(tf);
+
+                if (maintainOffset)
+                    offsets.Add(tf.worldToLocalMatrix * constrainedTf.localToWorldMatrix);
+                else
+                    offsets.Add(Matrix4x4.identity);
+
+                // weight: animCurve ΂gBȂ MayaNode l or 1.0
+                if (weightNodeByIndex.TryGetValue(idx, out var wNode))
+                {
+                    weightNodes.Add(wNode);
+                    defaultWeights.Add(0f); // gp
+                }
+                else
+                {
+                    weightNodes.Add(null);
+                    defaultWeights.Add(GetInlineWeightFallback(constraintNode, idx, 1f));
+                }
+            }
+
+            if (targets.Count == 0)
+                return null;
+
+            return new ParentConstraintEvalNode(
+                constraintNode.NodeName,
+                constrainedTf,
+                targets,
+                offsets,
+                weightNodes,
+                defaultWeights);
+        }
+
+        // -----------------------------
+        // helpers
+        // -----------------------------
+
+        private static string FindConstrained(MayaNode constraint, MayaScene scene)
+        {
+            // constraint  constrained (translate/rotate Ȃ) D
+            foreach (var c in scene.ConnectionGraph.Connections)
+            {
+                if (c.SrcNode != constraint.NodeName) continue;
+
+                var dst = scene.GetNode(c.DstNode);
+                if (dst == null) continue;
+
+                if (dst.NodeType == "transform" || dst.NodeType == "joint")
+                    return c.DstNode;
+            }
+            return null;
+        }
+
+        private static bool GetBool(MayaNode n, string k)
+        {
+            if (n.Attributes.TryGetValue(k, out var a))
+            {
+                if (a.Data?.Value is int i) return i != 0;
+                if (a.Data?.Value is bool b) return b;
+            }
+            return false;
+        }
+
+        private static float GetInlineWeightFallback(MayaNode constraintNode, int index, float def)
+        {
+            // .ma setAttr  "target[0].targetWeight" ۑĂꍇ
+            var key1 = $"target[{index}].targetWeight";
+            if (constraintNode.Attributes.TryGetValue(key1, out var a))
+            {
+                if (a.Data?.Value is float f) return f;
+                if (a.Data?.Value is int i) return i;
+            }
+
+            // w0 ̂悤ȕʖœĂꍇ̕ی
+            var key2 = $"w{index}";
+            if (constraintNode.Attributes.TryGetValue(key2, out var b))
+            {
+                if (b.Data?.Value is float f2) return f2;
+                if (b.Data?.Value is int i2) return i2;
+            }
+
+            return def;
+        }
+    }
+}
+
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+
+namespace MayaImporter.Phase3.Evaluation
+{
+    public class ParentConstraintEvalNode : EvalNode
+    {
+        private readonly Transform _constrained;
+        private readonly List<Transform> _targets;
+        private readonly List<Matrix4x4> _offsets;
+
+        // animated weight
+        private readonly List<WeightEvalNode> _weightNodes;
+
+        // fallback weight�ianimCurve �������ꍇ�j
+        private readonly List<float> _defaultWeights;
+
+        public ParentConstraintEvalNode(
+            string nodeName,
+            Transform constrained,
+            List<Transform> targets,
+            List<Matrix4x4> offsets,
+            List<WeightEvalNode> weightNodes,
+            List<float> defaultWeights)
+            : base(nodeName)
+        {
+            _constrained = constrained;
+            _targets = targets;
+            _offsets = offsets;
+            _weightNodes = weightNodes;
+            _defaultWeights = defaultWeights;
+
+            // weight �� constraint �̈ˑ��iDirty �����R�ɓ`�d�j
+            for (int i = 0; i < _weightNodes.Count; i++)
+            {
+                if (_weightNodes[i] != null)
+                    AddInput(_weightNodes[i]);
+            }
+        }
+
+        protected override void Evaluate(EvalContext ctx)
+        {
+            if (_constrained == null || _targets == null || _targets.Count == 0)
+                return;
+
+            Vector3 pos = Vector3.zero;
+            Quaternion rot = Quaternion.identity;
+            float total = 0f;
+
+            int count = _targets.Count;
+            for (int i = 0; i < count; i++)
+            {
+                var t = _targets[i];
+                if (t == null) continue;
+
+                float w = (_weightNodes[i] != null)
+                    ? _weightNodes[i].Value
+                    : _defaultWeights[i];
+
+                if (w <= 0f) continue;
+
+                total += w;
+
+                var m = t.localToWorldMatrix * _offsets[i];
+                Vector3 p = new Vector3(m.m03, m.m13, m.m23);
+
+                pos += p * w;
+                rot = Quaternion.Slerp(
+                    rot,
+                    m.rotation,
+                    w / Mathf.Max(total, Mathf.Epsilon));
+            }
+
+            if (total <= 0f)
+                return;
+
+            _constrained.position = pos / total;
+            _constrained.rotation = rot;
+        }
     }
 }

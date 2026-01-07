@@ -5,13 +5,13 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Wave Deformer
-    /// Phase-1 implementation:
+    /// Production implementation:
     /// - Decodes attrs into fields
     /// - Overrides ApplyToUnity => coverage: not STUB
     ///
     /// Note:
-    /// - time/speed ‚È‚Ç‚Í Maya ‚Ì time “ü—ÍÚ‘±‚ÉˆË‘¶‚·‚éê‡‚ª‚ ‚é‚½‚ßA‚Ü‚¸‚ÍŒÅ’è’l‚Æ‚µ‚Ä•ÛB
-    ///   iŸ‚ÌƒtƒF[ƒY‚Å time Ú‘±‚Ì•]‰¿‚ÖŠg’£‰Â”\j
+    /// - time/speed ãªã©ã¯ Maya ã® time å…¥åŠ›æ¥ç¶šã«ä¾å­˜ã™ã‚‹å ´åˆãŒã‚ã‚‹ãŸã‚ã€ã¾ãšã¯å›ºå®šå€¤ã¨ã—ã¦ä¿æŒã€‚
+    ///   ï¼ˆæ¬¡ã®ãƒ•ã‚§ãƒ¼ã‚ºã§ time æ¥ç¶šã®è©•ä¾¡ã¸æ‹¡å¼µå¯èƒ½ï¼‰
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("wave")]

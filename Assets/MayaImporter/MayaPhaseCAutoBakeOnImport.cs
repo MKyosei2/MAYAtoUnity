@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
@@ -9,18 +10,18 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Phase C (‘S•”·‚è):
-    /// C-4: •Ï‰»‚µ‚Ä‚¢‚éƒ`ƒƒƒ“ƒlƒ‹‚¾‚¯ƒxƒCƒNiClipŒy—Ê‰»j
-    /// C-5: DeterminismiClipƒnƒbƒVƒ…j‚ğ•Û‘¶‚µ‚ÄÄŒ»«‚ğØ–¾
-    /// C-6: Constraint/IK/Expression “™‚ÌgUnity‚ÉŠT”O‚ª‚È‚¢h‚à‚Ì‚ğ•ÛiŒ‡‘¹ƒ[ƒj
-    /// C-7: Auditî•ñ‚ğ 1‰æ–Ê‚ÉW–ñiInspector‹­‰»‚ÍEditorƒXƒNƒŠƒvƒgj
+    /// Phase C (S):
+    /// C-4: Ï‰Ä‚`lxCNiClipyÊ‰j
+    /// C-5: DeterminismiClipnbVjÛ‘ÄÄŒØ–
+    /// C-6: Constraint/IK/Expression ÌgUnityÉŠTOÈ‚hÌ‚Ûi[j
+    /// C-7: Audit 1Ê‚ÉWiInspectorEditorXNvgj
     ///
-    /// –¼‘O‹óŠÔ·ˆÙ‚É‹­‚¢FConstraints/IK/TimeNode“™‚Í”½Ë‚Åbest-effort
-    /// —áŠO‚ğ“Š‚°‚¸ import ‚ğ~‚ß‚È‚¢i100%•Ûv‘zj
+    /// OÔÙ‚É‹FConstraints/IK/TimeNodeÍ”Ë‚best-effort
+    /// Oğ“Š‚ import ~ß‚È‚i100%Ûvzj
     /// </summary>
     public static class MayaPhaseCAutoBakeOnImport
     {
-        // C-4: •Ï‰»ŒŸo‚Ìè‡’liƒmƒCƒY‚ÅƒL[‚ª‘‚¦‚·‚¬‚é‚Ì‚ğ—}‚¦‚éj
+        // C-4: Ï‰oè‡’limCYÅƒL[Ì‚}j
         private const float PosEps = 1e-6f;
         private const float ScaleEps = 1e-6f;
         private const float RotEps = 1e-7f;
@@ -113,7 +114,7 @@ namespace MayaImporter.Core
 
             try
             {
-                // TimeNodeŒİŠ·’T‚µFstartFrame/endFrame/framesPerSecond ‚ğ‚Â Component
+                // TimeNodeİŠTFstartFrame/endFrame/framesPerSecond  Component
                 var comps = root.GetComponentsInChildren<Component>(true);
                 for (int i = 0; i < comps.Length; i++)
                 {
@@ -123,7 +124,7 @@ namespace MayaImporter.Core
                     var t = c.GetType();
                     var tn = t.Name ?? "";
 
-                    // ‹ß‚¢–¼‘O‚¾‚¯Œ©‚éiƒmƒCƒYíŒ¸j
+                    // ß‚OimCYíŒ¸j
                     if (!tn.Contains("Time", StringComparison.OrdinalIgnoreCase) &&
                         !tn.Contains("time", StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -273,7 +274,7 @@ namespace MayaImporter.Core
                 if (t == null) continue;
 
                 var st = states[t];
-                if (!st.HasAnyChange) continue; // C-4: ‘S‚­•Ï‰»‚µ‚È‚¢Transform‚ÍƒXƒLƒbƒv
+                if (!st.HasAnyChange) continue; // C-4: SÏ‰È‚TransformÍƒXLbv
 
                 string path = AnimationUtility.CalculateTransformPath(t, root.transform);
 
@@ -308,7 +309,7 @@ namespace MayaImporter.Core
             stats.curveCount = curveCount;
             stats.keyCount = keyCount;
 
-            // Clip‚ªŠ®‘S‚É‹ói‰½‚à•Ï‰»‚µ‚È‚¢j‚È‚çnullˆµ‚¢‚É‚¹‚¸A‹óclip‚ğ•Ô‚·iØ‹’‚Æ‚µ‚Äc‚·j
+            // ClipSÉ‹iÏ‰È‚jÈ‚nullÉ‚AclipÔ‚iØ‹Æ‚Äcj
             return clip;
         }
 
@@ -440,7 +441,7 @@ namespace MayaImporter.Core
 
             private static float QuaternionDotDelta(Quaternion a, Quaternion b)
             {
-                // 1 - |dot| ‚ª¬‚³‚¢‚Ù‚Ç‹ß‚¢
+                // 1 - |dot| Ù‚Ç‹ß‚
                 float dot = Mathf.Abs(Quaternion.Dot(a, b));
                 return 1f - dot;
             }

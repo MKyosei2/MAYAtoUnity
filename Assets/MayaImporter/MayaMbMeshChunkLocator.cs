@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,14 +7,14 @@ namespace MayaImporter.Core
 {
     /// <summary>
     /// Phase2 mesh payload locator for .mb:
-    /// ‹­‰»”ÅiWindow Searchj
+    /// ÅiWindow Searchj
     ///
-    /// –Ú“I:
-    /// - .mb ‚Ì chunk decode ‚©‚çAmesh(shape)ƒm[ƒh‚É‘Î‚µ‚ÄŒó•âpayloadifloat/uintj‚ÌQÆ‚ğ•t—^‚·‚é
-    /// - "–¼‘O‚ªo‚½chunk‚Ìü•Ói‘OŒãƒEƒBƒ“ƒhƒEj" ‚ğ’Tõ‚µ‚ÄE‚¢˜R‚ê‚ğŒ¸‚ç‚·
-    /// - •t—^‚ÍAdditive‚Ì‚İiRawBinaryBytes‚Íí‚É•Ûj
+    /// Ú“I:
+    /// - .mb  chunk decode Amesh(shape)m[hÉ‘Î‚ÄŒpayloadifloat/uintjÌQÆ‚t^
+    /// - "OochunkÌÓiOEBhEj" TÄERç‚·
+    /// - t^AdditiveÌ‚İiRawBinaryBytesÍÉ•Ûj
     ///
-    /// •t—^‚·‚éQÆ:
+    /// t^Q:
     /// - Float chunk refs: up to 10 (positions/normals/uv/uv2 candidates)
     /// - UInt  chunk refs: up to 8  (indices/polyFaces candidates)
     /// </summary>
@@ -25,13 +26,13 @@ namespace MayaImporter.Core
         private const int MaxFloatRefs = 10;
         private const int MaxUIntRefs = 8;
 
-        // Anchor‚Ì‘OŒã‚ğ’Tõ‚·‚éƒEƒBƒ“ƒhƒE
+        // AnchorÌ‘OTEBhE
         private const int WindowBefore = 64;
         private const int WindowAfter = 512;
 
-        // Depth‹–—eianchor depth ‚ğŠî€‚ÉA‚Ç‚Ì’ö“x‚Ì[‚³‚Ìchunk‚Ü‚Å’Ç‚¤‚©j
-        private const int DepthDownTolerance = 2;  // anchorDepth - 2 ‚Ü‚Å‹–—e
-        private const int DepthUpTolerance = 8;    // anchorDepth + 8 ‚Ü‚Å‹–—e
+        // Deptheianchor depth î€ÉAÇ‚Ì’xÌ[chunkÜ‚Å’Ç‚j
+        private const int DepthDownTolerance = 2;  // anchorDepth - 2 Ü‚Å‹e
+        private const int DepthUpTolerance = 8;    // anchorDepth + 8 Ü‚Å‹e
 
         private sealed class Anchor
         {
@@ -59,7 +60,7 @@ namespace MayaImporter.Core
             if (chunks.Count == 0) return;
 
             // ---------------------------------------------------------
-            // 1) meshŒó•âƒm[ƒh‚ğW‚ß‚éiNodeType=mesh + Shape–¼j
+            // 1) meshm[hWß‚iNodeType=mesh + Shapej
             // ---------------------------------------------------------
             var meshKeys = new HashSet<string>(StringComparer.Ordinal);
             var leafToKeys = new Dictionary<string, List<string>>(StringComparer.Ordinal);
@@ -77,13 +78,13 @@ namespace MayaImporter.Core
                     continue;
                 }
 
-                // meshˆµ‚¢‚Ìshape–¼‚ğE‚¤ibest-effortj
+                // meshshapeEibest-effortj
                 if (!string.IsNullOrEmpty(leaf) && leaf.EndsWith("Shape", StringComparison.Ordinal))
                 {
                     meshKeys.Add(rec.Name);
                     AddLeafMap(leafToKeys, leaf, rec.Name);
 
-                    // unknown/transform/empty ‚ğ mesh ‚ÉŠñ‚¹‚éiŒã’i‚Ìbuilder‚ªˆµ‚¢‚â‚·‚¢j
+                    // unknown/transform/empty  mesh ÉŠñ‚¹‚iibuilderâ‚·j
                     if (rec.NodeType == "unknown" || rec.NodeType == "transform" || string.IsNullOrEmpty(rec.NodeType))
                         rec.NodeType = "mesh";
                 }
@@ -96,8 +97,8 @@ namespace MayaImporter.Core
             }
 
             // ---------------------------------------------------------
-            // 2) chunk‚ğ1‰ñ‘–¸‚µ‚Ä anchor ‚ğW‚ß‚é
-            //    - decodedStrings ‚É DAGƒpƒX or leaf ‚ªo‚½‚ç anchor ‚Æ‚µ‚Ä‹L˜^
+            // 2) chunk1ñ‘– anchor Wß‚
+            //    - decodedStrings  DAGpX or leaf o anchor Æ‚Ä‹L^
             // ---------------------------------------------------------
             var anchors = new Dictionary<string, Anchor>(StringComparer.Ordinal);
 
@@ -107,7 +108,7 @@ namespace MayaImporter.Core
                 if (ch == null) continue;
                 if (ch.DecodedStrings == null || ch.DecodedStrings.Length == 0) continue;
 
-                // ‚±‚Ìchunk‚ªQÆ‚µ‚Ä‚¢‚é‰Â”\«‚Ì‚ ‚émeshKeyŒQ
+                // chunkQÆ‚Ä‚Â”\Ì‚meshKeyQ
                 var referenced = GetReferencedMeshKeys(meshKeys, leafToKeys, ch.DecodedStrings);
 
                 if (referenced.Count == 0) continue;
@@ -133,25 +134,25 @@ namespace MayaImporter.Core
                     {
                         a.HitCount++;
 
-                        // BestIndex ‚Íuhit‚ª‘‚¦‚½chunkv‚ğÌ—piŒã•û‚ÉŠñ‚é‚Ù‚Ç payload ‚É‹ß‚¢ƒP[ƒX‚ª‘½‚¢j
-                        // depth‚ÍÅŒã‚ÉÌ—p‚µ‚½‚à‚Ì
+                        // BestIndex ÍuhitchunkvÌ—piÉŠÙ‚ payload É‹ß‚P[Xj
+                        // depthÍÅŒÉÌ—p
                         a.BestIndex = i;
                         a.BestDepth = ch.Depth;
                     }
                 }
             }
 
-            // anchor‚ªŒ©‚Â‚©‚ç‚È‚¢ mesh ‚ÍA‹ŒƒƒWƒbƒN‘Š“–‚Å gShape–¼‚¾‚¯h ‚©‚ç‚àE‚¤iÅŒã‚Ì•ÛŒ¯j
+            // anchorÂ‚È‚ mesh ÍAWbN gShapeh EiÅŒÌ•ÛŒj
             if (anchors.Count == 0)
             {
-                // fallback: ––”ö"Shape"‚Ì leaf ‚ğƒL[‚ÉAExtractedStrings ‚©‚ç’T‚·
+                // fallback: "Shape" leaf L[ÉAExtractedStrings T
                 var fallbackAnchors = BuildFallbackAnchorsFromExtractedStrings(scene, meshKeys, leafToKeys);
                 foreach (var kv in fallbackAnchors)
                     anchors[kv.Key] = kv.Value;
             }
 
             // ---------------------------------------------------------
-            // 3) anchor–ˆ‚É window’Tõ‚µ‚ÄŒó•âchunk ref‚ğ•t—^
+            // 3) anchor windowTÄŒchunk reft^
             // ---------------------------------------------------------
             int floatAddedTotal = 0;
             int uintAddedTotal = 0;
@@ -445,12 +446,12 @@ namespace MayaImporter.Core
             }
 
             // Sample heuristic:
-            // - polyFaces‚Ì‚æ‚¤‚É•‰”‚ª¬‚´‚éê‡iint‚Æ‚µ‚Ä“Ç‚Ş‚Æ•‰‚É‚È‚éj¨Œó•â‚Æ‚µ‚Ä­‚µ‰Á“_
+            // - polyFacesÌ‚æ‚¤É•ê‡iintÆ‚Ä“Ç‚Ş‚Æ•É‚È‚jÆ‚Ä_
             float sampleScore = 0f;
             var u = ch.DecodedUInts;
             if (u != null && u.Length > 0)
             {
-                // u ‚Í uint ‚È‚Ì‚Å•‰””»’è‚Í‚Å‚«‚È‚¢‚ªA0/1•Î‚è‚â‹‘å’l•Î‚è‚ğ­‚µ”ğ‚¯‚é
+                // u  uint È‚Ì‚Å•Í‚Å‚È‚A0/1Î‚â‹lÎ‚
                 int small = 0;
                 int huge = 0;
                 for (int i = 0; i < u.Length; i++)
@@ -599,7 +600,7 @@ namespace MayaImporter.Core
             var anchors = new Dictionary<string, Anchor>(StringComparer.Ordinal);
             if (scene?.MbIndex?.ExtractedStrings == null) return anchors;
 
-            // ExtractedStrings‚É‚Í‘å—Ê‚Ì•¶š—ñ‚ª“ü‚Á‚Ä‚¢‚é‚±‚Æ‚ª‚ ‚é‚ªAanchor‚Í "Å‰‚ÉŒ©‚Â‚©‚Á‚½‚ç" ’ö“x‚Å\•ª
+            // ExtractedStringsÉ‚Í‘Ê‚Ì•ñ‚ª“Ä‚é‚±Æ‚é‚ªAanchor "ÅÉŒÂ‚" xÅ\
             for (int si = 0; si < scene.MbIndex.ExtractedStrings.Count; si++)
             {
                 var s = scene.MbIndex.ExtractedStrings[si];

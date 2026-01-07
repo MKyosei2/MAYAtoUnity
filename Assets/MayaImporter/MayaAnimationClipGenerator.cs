@@ -1,16 +1,17 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace MayaImporter.Animation
 {
     /// <summary>
-    /// Maya Animation ƒm[ƒhŒQ‚©‚ç Unity AnimationClip ‚ğ¶¬‚·‚éƒNƒ‰ƒX
-    /// Maya API ”ñˆË‘¶‚Å“®ì‚·‚éİŒv
+    /// Maya Animation m[hQ Unity AnimationClip ğ¶NX
+    /// Maya API Ë‘Å“ì‚·İŒv
     /// </summary>
     public class MayaAnimationClipGenerator
     {
         /// <summary>
-        /// Maya‚©‚çƒp[ƒX‚³‚ê‚½ƒL[ƒtƒŒ[ƒ€î•ñiŠÈˆÕ•\Œ»j
+        /// Mayap[Xê‚½L[t[iÈˆÕ•\j
         /// </summary>
         public class MayaKeyframe
         {
@@ -19,7 +20,7 @@ namespace MayaImporter.Animation
         }
 
         /// <summary>
-        /// MayaƒAƒjƒ[ƒVƒ‡ƒ“ƒJ[ƒuî•ñ
+        /// MayaAj[VJ[u
         /// </summary>
         public class MayaAnimCurve
         {
@@ -28,7 +29,7 @@ namespace MayaImporter.Animation
         }
 
         /// <summary>
-        /// MayaƒAƒjƒ[ƒVƒ‡ƒ“î•ñ‚©‚çUnity AnimationClip‚ğ¶¬
+        /// MayaAj[Vñ‚©‚Unity AnimationClipğ¶
         /// </summary>
         public AnimationClip GenerateClip(
             string clipName,

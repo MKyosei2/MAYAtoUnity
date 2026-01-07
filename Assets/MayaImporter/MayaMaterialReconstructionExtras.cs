@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,10 +6,10 @@ using UnityEngine;
 namespace MayaImporter.Components
 {
     /// <summary>
-    /// Unity‚ÌMaterial‚¾‚¯‚Å‚Í•Û‚µ‚«‚ê‚È‚¢u100%ƒf[ƒ^v—p‚Ì•ÛæB
-    /// - UV‰ñ“]iUnity•W€‚ÌSetTextureScale/Offset‚Å‚Í•\Œ»‚Å‚«‚È‚¢j
-    /// - RoughnessMap“™AUnity‚ÌMetallicGlossMap‚Ö–¢”½‰f/–¢ƒpƒbƒN‚Ìî•ñ
-    /// - ÀÛ‚Éƒ[ƒh‚µ‚½TextureQÆiƒ‰ƒ“ƒ^ƒCƒ€/ƒGƒfƒBƒ^‚Ç‚¿‚ç‚Å‚àŠm”F‰Â”\j
+    /// UnityMaterialÅ‚Í•ÛÈ‚u100%f[^vpÌ•ÛB
+    /// - UV]iUnityWSetTextureScale/OffsetÅ‚Í•\Å‚È‚j
+    /// - RoughnessMapAUnityMetallicGlossMapÖ–f/pbNÌ
+    /// - Û‚Éƒ[hTextureQÆi^C/GfB^Ç‚Å‚mFÂ”\j
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MayaMaterialReconstructionExtras : MonoBehaviour
@@ -43,7 +44,7 @@ namespace MayaImporter.Components
             public string slotName;        // "BaseColor", "Normal"...
             public Vector2 repeat;
             public Vector2 offset;
-            public float rotateDegrees;    // Unity•W€‚É‚Í–³‚¢‚Ì‚Å•Û‚Ì‚İ
+            public float rotateDegrees;    // UnityWÉ‚Í–Ì‚Å•ÛÌ‚
         }
 
         [Header("UV slots (Unity lacks rotation)")]

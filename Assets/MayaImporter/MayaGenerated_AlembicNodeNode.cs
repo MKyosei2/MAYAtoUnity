@@ -1,4 +1,5 @@
-// Auto-generated placeholder -> Phase C implementation (decoded, non-empty).
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// Auto-generated  Production implementation (decoded, non-empty).
 using UnityEngine;
 using MayaImporter.Core;
 

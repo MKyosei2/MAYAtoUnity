@@ -1,5 +1,6 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // Assets/MayaImporter/MayaProceduralTextureMetadata.cs
-// Procedural texture bake/debug metadata (Maya•s—v‰^—p—p‚Ì‹¤’Êƒƒ^)
+// Procedural texture bake/debug metadata (Mayasv^ppÌ‹Êƒ^)
 
 using UnityEngine;
 
@@ -17,7 +18,7 @@ namespace MayaImporter.Components
         public int bakedWidth = 256;
         public int bakedHeight = 256;
 
-        // ŒÝŠ·: ŒÃ‚¢ƒR[ƒh‚ª width/height ‚ðŽg‚¤ê‡
+        // ÝŠ: Ã‚R[h width/height gê‡
         public int width
         {
             get => bakedWidth;
@@ -34,7 +35,7 @@ namespace MayaImporter.Components
         public string connectedPlace2dNodeName;
         public string inputTextureNodeName;
 
-        // ŒÝŠ·: remapŒn‚È‚Ç‚ª“ü—Íƒm[ƒh–¼‚ð•Ê–¼‚ÅŽ‚Á‚Ä‚¢‚éê‡
+        // ÝŠ: remapnÈ‚Ç‚Íƒm[hÊ–ÅŽÄ‚ê‡
         public string inputNodeA;
         public string inputNodeB;
         public string inputNodeC;
@@ -47,7 +48,7 @@ namespace MayaImporter.Components
         [Header("Bake Output")]
         public string bakedTexturePath;
 
-        // ŒÝŠ·: remapŒn‚È‚Ç‚ª bakedPngPath ‚ðŽQÆ‚·‚éê‡
+        // ÝŠ: remapnÈ‚Ç‚ bakedPngPath QÆ‚ê‡
         public string bakedPngPath
         {
             get => bakedTexturePath;

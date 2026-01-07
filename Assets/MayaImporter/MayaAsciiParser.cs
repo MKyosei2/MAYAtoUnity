@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -193,6 +194,8 @@ namespace MayaImporter.Core
             }
 
             var n = scene.GetOrCreateNode(name, nodeType);
+            // Provenance for audit
+            scene.MarkProvenance(name, scene.SourceKind == MayaSourceKind.BinaryMb ? MayaNodeProvenance.MbEmbeddedAscii : MayaNodeProvenance.AsciiCommands, "maCommands");
             if (!string.IsNullOrEmpty(parent))
                 n.ParentName = parent;
 

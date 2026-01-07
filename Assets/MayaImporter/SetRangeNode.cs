@@ -1,6 +1,6 @@
-﻿// MayaImporter/SetRangeNode.cs
+// MayaImporter/SetRangeNode.cs
 // NodeType: setRange
-// Phase-1 (real decode + value publish)
+// Production (real decode + value publish)
 //
 // Maya setRange (best-effort):
 // out = min + (max-min) * ((value-oldMin)/(oldMax-oldMin))

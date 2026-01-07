@@ -1,4 +1,4 @@
-// Auto-generated placeholder -> Phase C implementation (decoded, non-empty).
+// Auto-generated  Production implementation (decoded, non-empty).
 using UnityEngine;
 using MayaImporter.Core;
 

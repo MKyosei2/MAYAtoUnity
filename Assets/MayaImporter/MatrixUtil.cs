@@ -6,8 +6,8 @@ namespace MayaImporter.Utils
     public static class MatrixUtil
     {
         /// <summary>
-        /// tokens[start..start+15] ‚ğ Matrix4x4 ‚É‹l‚ß‚éirow-major ‘z’èjB
-        /// Maya¨Unity ‚ÌÀ•W•ÏŠ·‚Í Core ‘¤‚Ì MayaToUnityConversion ‚É”C‚¹‚é•ûjB
+        /// tokens[start..start+15] ã‚’ Matrix4x4 ã«è©°ã‚ã‚‹ï¼ˆrow-major æƒ³å®šï¼‰ã€‚
+        /// Mayaâ†’Unity ã®åº§æ¨™å¤‰æ›ã¯ Core å´ã® MayaToUnityConversion ã«ä»»ã›ã‚‹æ–¹é‡ã€‚
         /// </summary>
         public static bool TryParseMatrix4x4(IReadOnlyList<string> tokens, int start, out Matrix4x4 m)
         {
@@ -23,7 +23,7 @@ namespace MayaImporter.Utils
                     return false;
             }
 
-            // Unity ‚Ì Matrix4x4 ‚Í m[row,col] “I‚É m00..m33
+            // Unity ã® Matrix4x4 ã¯ m[row,col] çš„ã« m00..m33
             m.m00 = v[0]; m.m01 = v[1]; m.m02 = v[2]; m.m03 = v[3];
             m.m10 = v[4]; m.m11 = v[5]; m.m12 = v[6]; m.m13 = v[7];
             m.m20 = v[8]; m.m21 = v[9]; m.m22 = v[10]; m.m23 = v[11];
@@ -32,25 +32,46 @@ namespace MayaImporter.Utils
         }
 
         public static void DecomposeTRS(in Matrix4x4 m, out Vector3 t, out Quaternion r, out Vector3 s)
-        {
-            t = m.GetColumn(3);
+{
+    t = m.GetColumn(3);
 
-            // scale ‚Í—ñƒxƒNƒgƒ‹‚Ì’·‚³
-            var col0 = m.GetColumn(0);
-            var col1 = m.GetColumn(1);
-            var col2 = m.GetColumn(2);
+    // Scale = column magnitudes (preserve possible reflection by carrying sign on one axis)
+    var col0 = (Vector3)m.GetColumn(0);
+    var col1 = (Vector3)m.GetColumn(1);
+    var col2 = (Vector3)m.GetColumn(2);
 
-            s = new Vector3(col0.magnitude, col1.magnitude, col2.magnitude);
+    float sx = col0.magnitude;
+    float sy = col1.magnitude;
+    float sz = col2.magnitude;
 
-            // ‰ñ“]s—ñ‚ğ³‹K‰»
-            var rm = Matrix4x4.identity;
-            if (s.x != 0f) rm.SetColumn(0, col0 / s.x);
-            if (s.y != 0f) rm.SetColumn(1, col1 / s.y);
-            if (s.z != 0f) rm.SetColumn(2, col2 / s.z);
-            rm.m33 = 1f;
+    // Avoid division by zero
+    var n0 = (sx > 1e-12f) ? (col0 / sx) : Vector3.right;
+    var n1 = (sy > 1e-12f) ? (col1 / sy) : Vector3.up;
+    var n2 = (sz > 1e-12f) ? (col2 / sz) : Vector3.forward;
 
-            r = rm.rotation;
-        }
+    // Detect handedness (reflection) via determinant sign
+    float det = Vector3.Dot(Vector3.Cross(n0, n1), n2);
+
+    // If reflected (det < 0), flip the axis with the largest scale to preserve the matrix sign
+    if (det < 0f)
+    {
+        if (sx >= sy && sx >= sz) { sx = -sx; n0 = -n0; }
+        else if (sy >= sx && sy >= sz) { sy = -sy; n1 = -n1; }
+        else { sz = -sz; n2 = -n2; }
+    }
+
+    s = new Vector3(sx, sy, sz);
+
+    // Rotation matrix from normalized columns
+    var rm = Matrix4x4.identity;
+    rm.SetColumn(0, new Vector4(n0.x, n0.y, n0.z, 0f));
+    rm.SetColumn(1, new Vector4(n1.x, n1.y, n1.z, 0f));
+    rm.SetColumn(2, new Vector4(n2.x, n2.y, n2.z, 0f));
+    rm.m33 = 1f;
+
+    r = rm.rotation;
+}
+
 
         public static Matrix4x4 ComposeTRS(Vector3 t, Quaternion r, Vector3 s)
             => Matrix4x4.TRS(t, r, s);

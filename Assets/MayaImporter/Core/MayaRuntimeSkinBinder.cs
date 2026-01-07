@@ -1,9 +1,10 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// AutoSkinBinder: Prefabƒ[ƒh‚É SkinnedMeshRenderer ‚ª SkinCluster QÆ‚ğ•œ‹Œ‚·‚éB
+    /// AutoSkinBinder: Prefab[h SkinnedMeshRenderer  SkinCluster QÆ‚ğ•œ‹B
     /// </summary>
     [DefaultExecutionOrder(-700)]
     public sealed class MayaRuntimeSkinBinder : MonoBehaviour
@@ -17,7 +18,7 @@ namespace MayaImporter.Core
                 if (s.sharedMesh == null) continue;
                 if (s.bones != null && s.bones.Length > 0) continue;
 
-                // ‘ã‘ÖœŒŸõF“¯ŠK‘wtransform‚ğƒ{[ƒ“‚Éİ’è
+                // ÖFKwtransform{[Éİ’
                 var t = s.transform.parent;
                 if (t == null) continue;
                 var bones = t.GetComponentsInChildren<Transform>(true);

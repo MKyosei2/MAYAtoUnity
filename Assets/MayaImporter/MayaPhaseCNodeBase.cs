@@ -10,7 +10,7 @@ namespace MayaImporter.Core
     using ConnectionRole = MayaNodeComponentBase.ConnectionRole;
 
     /// <summary>
-    /// Phase C "real" implementation base for nodes that previously were placeholders.
+    /// Production implementation base for nodes that previously were placeholders.
     /// - Keeps 100% raw attributes + connections (already stored by MayaNodeComponentBase)
     /// - Adds deterministic decoding + inspector-visible fields (so the class is not empty)
     /// - Ensures ApplyToUnity is implemented (coverage: not STUB)
@@ -18,7 +18,7 @@ namespace MayaImporter.Core
     [DisallowMultipleComponent]
     public abstract class MayaPhaseCNodeBase : MayaNodeComponentBase
     {
-        [Header("Phase C - Import Summary (auto)")]
+        [Header("Production - Import Summary (auto)")]
         [SerializeField] private int attributeCount;
         [SerializeField] private int connectionCount;
 

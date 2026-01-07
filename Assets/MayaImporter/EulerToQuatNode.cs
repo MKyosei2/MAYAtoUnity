@@ -1,5 +1,5 @@
 // Assets/MayaImporter/EulerToQuatNode.cs
-// Phase C placeholder -> implemented (structured decode + best-effort initial evaluation)
+// Production implementation (structured decode + best-effort initial evaluation)
 //
 // eulerToQuat:
 //  - reads inputRotate (deg) + inputRotateOrder (0..5)

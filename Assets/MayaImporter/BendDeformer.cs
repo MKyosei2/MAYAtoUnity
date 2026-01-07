@@ -5,13 +5,13 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Bend Deformer
-    /// Phase-1 implementation:
+    /// Production implementation:
     /// - Keeps raw attrs/conns (already stored by MayaNodeComponentBase)
     /// - Decodes common + bend-specific attrs into inspector fields
     /// - Overrides ApplyToUnity => coverage: not STUB
     ///
     /// Unity reconstruction:
-    /// - Unity‚ÉŠT”O‚ª‚È‚¢‚½‚ßAƒRƒ“ƒ|[ƒlƒ“ƒg‚Æ‚µ‚Äƒpƒ‰ƒ[ƒ^‚ğ•Ûi«—ˆ‚ÌƒƒbƒVƒ…•ÏŒ`•]‰¿‚ÉÚ‘±‰Â”\j
+    /// - Unityã«æ¦‚å¿µãŒãªã„ãŸã‚ã€ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã¨ã—ã¦ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ä¿æŒï¼ˆå°†æ¥ã®ãƒ¡ãƒƒã‚·ãƒ¥å¤‰å½¢è©•ä¾¡ã«æ¥ç¶šå¯èƒ½ï¼‰
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("bend")]

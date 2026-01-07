@@ -1,10 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 
 namespace MayaImporter.Components
 {
     /// <summary>
     /// Maya material/shader node metadata holder.
-    /// Unity Material‚Ö•ÏŠ·‚·‚é‚½‚ß‚ÌÅ’áŒÀ{lossless•ÛB
+    /// Unity MaterialÖ•ÏŠé‚½ß‚ÌÅ’{losslessÛB
     /// </summary>
     public sealed class MayaMaterialMetadata : MonoBehaviour
     {

@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 ﻿// Assets/MayaImporter/MayaGenerated_FourByFourMatrixNode.cs
 // NodeType: fourByFourMatrix
 //

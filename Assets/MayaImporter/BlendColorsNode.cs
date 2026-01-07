@@ -1,5 +1,5 @@
-﻿// Assets/MayaImporter/BlendColorsNode.cs
-// Phase-1 implementation (not stub)
+// Assets/MayaImporter/BlendColorsNode.cs
+// Production implementation (not stub)
 // NodeType: blendColors
 //
 // - Decodes color1/color2 (+alpha1/alpha2 if present) + blender

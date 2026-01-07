@@ -1,7 +1,8 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // Assets/MayaImporter/MayaAnimCurveWrapModeUtil.cs
 // Maya animCurve infinity enum -> Unity WrapMode (best-effort).
-// NOTE: Maya Linear extrapolation ‚Í Unity WrapMode ‚Å•\Œ»‚Å‚«‚È‚¢‚½‚ß ClampForever ‚ÉŠñ‚¹‚éB
-// Evaluate() ‚Í MayaAnimCurveNodeComponent ‘¤‚ÅüŒ`ŠO‘}‚ğÀ{‚·‚éB
+// NOTE: Maya Linear extrapolation ï¿½ï¿½ Unity WrapMode ï¿½Å•\ï¿½ï¿½ï¿½Å‚ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½ï¿½ ClampForever ï¿½ÉŠñ‚¹‚ï¿½B
+// Evaluate() ï¿½ï¿½ MayaAnimCurveNodeComponent ï¿½ï¿½ï¿½Åï¿½ï¿½`ï¿½Oï¿½}ï¿½ï¿½ï¿½ï¿½ï¿½{ï¿½ï¿½ï¿½ï¿½B
 
 using UnityEngine;
 
@@ -20,13 +21,13 @@ namespace MayaImporter.Animation
             switch (mayaInfinityEnum)
             {
                 case 3: // Cycle
-                case 4: // CycleRelative (offset‚Í•\Œ»•s‰Â -> Loop)
+                case 4: // CycleRelative (offsetï¿½Í•\ï¿½ï¿½ï¿½sï¿½ï¿½ -> Loop)
                     return WrapMode.Loop;
 
                 case 5: // Oscillate
                     return WrapMode.PingPong;
 
-                // 1 Linear -> WrapMode‚Å‚Í•\Œ»•s‰ÂiEvaluate‚ÍüŒ`ŠO‘}j
+                // 1 Linear -> WrapModeï¿½Å‚Í•\ï¿½ï¿½ï¿½sï¿½ÂiEvaluateï¿½Íï¿½ï¿½`ï¿½Oï¿½}ï¿½j
                 case 1:
                 case 0:
                 default:

@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -82,7 +83,7 @@ namespace MayaImporter.Core
             if (outSb.Length > 0)
                 extractedText = outSb.ToString();
 
-            // g‰½‚©æ‚ê‚½‚©h ‚ÌˆÓ–¡‚Å trueiM—Š”»’è‚Í ShouldParsej
+            // gê‚½h ÌˆÓ– trueiM ShouldParsej
             return !string.IsNullOrWhiteSpace(extractedText);
 
             void FlushSegment()

@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 #if UNITY_EDITOR
 using System;
 using System.Security.Cryptography;
@@ -9,9 +10,9 @@ namespace MayaImporter.Core
 {
     /// <summary>
     /// Phase C-5:
-    /// AnimationClip ‚Ì“à—e‚©‚ç gˆÀ’èƒnƒbƒVƒ…h ‚ğì‚éiÄŒ»«‚ÌØ–¾jB
-    /// - binding(path/type/property) ‚Æ key(time/value/in/outTangent/weighted etc) ‚ğ‡˜•t‚«‚Å’¼—ñ‰»
-    /// - Unity‚Ì“à•”ID‚âQÆ‚ğg‚í‚È‚¢‚Ì‚ÅA“¯‚¶ƒxƒCƒNŒ‹‰Ê‚È‚ç“¯‚¶hash‚É‚È‚é
+    /// AnimationClip Ì“e gnbVh iÄŒÌØ–jB
+    /// - binding(path/type/property)  key(time/value/in/outTangent/weighted etc) tÅ’
+    /// - UnityÌ“IDQÆ‚gÈ‚Ì‚ÅAxCNÊ‚È‚ç“¯hashÉ‚È‚
     /// </summary>
     public static class MayaClipDeterminism
     {

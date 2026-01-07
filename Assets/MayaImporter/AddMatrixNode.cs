@@ -1,9 +1,9 @@
 // Assets/MayaImporter/AddMatrixNode.cs
-// Phase C placeholder -> implemented
+// Production implementation
 // NodeType: addMatrix
 //
-// - Collect input matrices from attributes (matrixIn[...] / inputMatrix[...] / inMatrix[...] ‚ğL‚­E‚¤)
-// - Best-effort: output = ƒ° inputMatrix[i] (element-wise)
+// - Collect input matrices from attributes (matrixIn[...] / inputMatrix[...] / inMatrix[...] ã‚’åºƒãæ‹¾ã†)
+// - Best-effort: output = Î£ inputMatrix[i] (element-wise)
 // - Publishes output via MayaImporter.Core.MayaMatrixValue
 //
 // IMPORTANT:

@@ -1,11 +1,11 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace MayaImporter.Animation
 {
     /// <summary>
     /// Base class for all Maya animation curves.
     /// Stores keyframe data independent of Unity.
-    /// Phase-1 강화:
+    /// Production 강화:
     /// - WrapMode(pre/post) を保持し、ToUnityCurve に反映
     /// </summary>
     [DisallowMultipleComponent]

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using MayaImporter.Core;
@@ -68,6 +69,22 @@ namespace MayaImporter.Geometry
                         ExpandedToOriginalVertex = expandedToOriginal;
                         BuiltMesh = true;
                         BuildNote = $"MB: {debugNote}";
+
+	                        // Phase-7: mark provisional/best-effort features for portfolio-proof auditing.
+	                        // This does not change the mesh; it only records the fact that the .mb path used heuristics.
+	                        try
+	                        {
+	                            if (targetGO != null)
+	                            {
+	                                if (BuildNote.Contains("[sequentialFallback]", StringComparison.Ordinal))
+	                                    MayaProvisionalMarker.Ensure(targetGO, MayaProvisionalKind.MbMeshSequentialFallback, BuildNote);
+	                                if (BuildNote.Contains("[polyFaces->triangulated]", StringComparison.Ordinal))
+	                                    MayaProvisionalMarker.Ensure(targetGO, MayaProvisionalKind.MbMeshPolyFacesTriangulated, BuildNote);
+	                                // Always mark that this mesh was decoded from .mb with heuristics
+	                                MayaProvisionalMarker.Ensure(targetGO, MayaProvisionalKind.MbMeshHeuristicDecode, BuildNote);
+	                            }
+	                        }
+	                        catch { }
                         log?.Info("[mesh/.mb] " + BuildNote);
                         return;
                     }

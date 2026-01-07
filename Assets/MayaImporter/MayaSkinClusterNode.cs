@@ -1,10 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 
 namespace MayaImporter.Geometry
 {
     /// <summary>
-    /// Maya SkinCluster ƒm[ƒh‚É‘Î‰‚·‚é Unity ‘¤ƒNƒ‰ƒX
-    /// Maya‚ÌƒXƒLƒjƒ“ƒOî•ñ‚ğ Unity SkinnedMeshRenderer ‚ÖÄ\’z‚·‚é
+    /// Maya SkinCluster m[hÉ‘Î‰ Unity NX
+    /// MayaÌƒXLjO Unity SkinnedMeshRenderer ÖÄ\z
     /// </summary>
     public class MayaSkinClusterNode : MonoBehaviour
     {
@@ -17,7 +18,7 @@ namespace MayaImporter.Geometry
         public BoneWeight[] boneWeights;
 
         /// <summary>
-        /// SkinnedMeshRenderer ‚ğ\’z
+        /// SkinnedMeshRenderer \z
         /// </summary>
         public void Apply(Mesh mesh)
         {

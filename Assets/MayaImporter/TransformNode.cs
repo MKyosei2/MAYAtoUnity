@@ -1,17 +1,19 @@
+ï»¿// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // Assets/MayaImporter/TransformNode.cs
 // NodeType: transform
 //
-// •ûj:
-// - Unity Transform ‚É”½‰f‚Å‚«‚é”ÍˆÍ‚Í TRS ‚Æ rotateOrder ‚ğŠmÀ‚É”½‰fB
-// - Unity Transform ‚Å•\Œ»‚Å‚«‚È‚¢ pivot/shear/rotateAxis/offsetParentMatrix ‚Í
-//   MayaTransformExtrasComponent ‚Éu•K‚¸•Û‘¶v‚µ‚Ä lossless ‚É‹ß‚Ã‚¯‚éB
-// - offsetParentMatrix ‚ª”ñ’PˆÊ‚Ì‚Æ‚«‚ÍAŠù‘¶d—l‚Ç‚¨‚è parent GO ‚ğ‘}“ü‚µ‚Ä•\Œ»i‰Â”\‚È”ÍˆÍ‚ÅTRS‚É•ª‰ğjB
+// æ–¹é‡:
+// - Unity Transform ã«åæ˜ ã§ãã‚‹ç¯„å›²ã¯ TRS ã¨ rotateOrder ã‚’ç¢ºå®Ÿã«åæ˜ ã€‚
+// - Unity Transform ã§è¡¨ç¾ã§ããªã„ pivot/shear/rotateAxis/offsetParentMatrix ã¯
+//   MayaTransformExtrasComponent ã«ã€Œå¿…ãšä¿å­˜ã€ã—ã¦ lossless ã«è¿‘ã¥ã‘ã‚‹ã€‚
+// - offsetParentMatrix ãŒéå˜ä½ã®ã¨ãã¯ã€æ—¢å­˜ä»•æ§˜ã©ãŠã‚Š parent GO ã‚’æŒ¿å…¥ã—ã¦è¡¨ç¾ï¼ˆå¯èƒ½ãªç¯„å›²ã§TRSã«åˆ†è§£ï¼‰ã€‚
 
 using System;
 using System.Globalization;
 using UnityEngine;
 using MayaImporter.Core;
-using MayaImporter.Animation;
+// â˜…åå‰è¡çªå›é¿ï¼ˆMayaImporter ãŒå‹ã¨ã—ã¦å­˜åœ¨ã—ã¦ã‚‚å¿…ãš namespace ã‚’æŒ‡ã™ï¼‰
+using MayaAnim = global::MayaImporter.Animation;
 using MayaImporter.Utils;
 
 namespace MayaImporter.DAG
@@ -129,7 +131,7 @@ namespace MayaImporter.DAG
                 spt != Vector3.zero ||
                 (hasOpm && opmNonIdentity);
 
-            // TRS-only audit matrices (rotateOrder‚Í applier ‚ªˆµ‚¤‚Ì‚Å‚±‚±‚ÍŠTZ)
+            // TRS-only audit matricesï¼ˆrotateOrder ã¯ applier å´ãŒæ‰±ã†ã®ã§ã“ã“ã¯æ¦‚ç®—ï¼‰
             var mayaRoughQ = Quaternion.Euler(rMaya);
             MayaToUnityConversion.BuildLocalMatrices(tMaya, mayaRoughQ, sMaya, options.Conversion, out ex.LocalTrsMatrixMaya, out ex.LocalTrsMatrixUnity);
 
@@ -143,8 +145,8 @@ namespace MayaImporter.DAG
             transform.localPosition = MayaToUnityConversion.ConvertPosition(tMaya, options.Conversion);
             transform.localScale = sMaya;
 
-            // rotateOrder ‚ğŠmÀ‚É”½‰fieuler‚Í Maya‹óŠÔ’l‚Å•Û‚µAapplier‘¤‚Å•ÏŠ·j
-            var applier = GetComponent<MayaEulerRotationApplier>() ?? gameObject.AddComponent<MayaEulerRotationApplier>();
+            // rotateOrder ã‚’ç¢ºå®Ÿã«åæ˜ ï¼ˆeuler ã¯ Maya ç©ºé–“å€¤ã‚’ä¿æŒã—ã€applier å´ã§å¤‰æ›ï¼‰
+            var applier = GetComponent<MayaAnim.MayaEulerRotationApplier>() ?? gameObject.AddComponent<MayaAnim.MayaEulerRotationApplier>();
             applier.rotateOrder = ro;
             applier.eulerDeg = rMaya;
             applier.autoDetectConversion = false;

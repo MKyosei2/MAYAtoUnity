@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.IO;
 using System.Text;
@@ -169,6 +170,52 @@ namespace MayaImporter.Core
             try
             {
                 scene.MbIndex = MayaMbIffReader.BuildIndex(bytes, log, maxChunks: 50000);
+
+            // ---- Step1.5: Deterministic hint extraction (Unity-only; additive) ----
+            try
+            {
+                MayaMbStringTableDecoder.Populate(scene, log);
+            }
+            catch (Exception ex)
+            {
+                log.Warn($".mb string-table decode failed (continue): {ex.GetType().Name}: {ex.Message}");
+            }
+
+            // ---- Step1.6: Deterministic node enumeration (Unity-only; additive) ----
+            try
+            {
+                if (options.MbDeterministicEnumerateNodes)
+                    MayaMbDeterministicNodeEnumerator.Populate(scene, options, log);
+            }
+            catch (Exception ex)
+            {
+                log.Warn($".mb deterministic enumeration failed (continue): {ex.GetType().Name}: {ex.Message}");
+            }
+
+            // ---- Step1.7: Shading/texture hint tagging from strings (Unity-only; additive) ----
+            if (options.MbTryTagShadingFromStrings)
+            {
+                // Older revisions used Populate(); current tagger API is Apply().
+                try { MayaMbShadingTagger.Apply(scene, log); }
+                catch (Exception ex) { log.Warn($".mb shading tagger failed (continue): {ex.GetType().Name}: {ex.Message}"); }
+            }
+
+            if (options.MbTryTagTexturesFromStrings)
+            {
+                // Older revisions used Populate(); current tagger API is Apply().
+                try { MayaMbTextureHintTagger.Apply(scene, log); }
+                catch (Exception ex) { log.Warn($".mb texture hint tagger failed (continue): {ex.GetType().Name}: {ex.Message}"); }
+            }
+
+            try
+            {
+                MayaMbMeshTopologyDecoder.Populate(scene, log);
+            }
+            catch (Exception ex)
+            {
+                log.Warn($".mb mesh-hints decode failed (continue): {ex.GetType().Name}: {ex.Message}");
+            }
+
             }
             catch (Exception ex)
             {
@@ -245,6 +292,49 @@ namespace MayaImporter.Core
                 }
             }
 
+            // ---- Step2.5: Try reconstruct command stream from null-terminated ASCII strings ----
+            // This is a second chance for files where the embedded-ascii scan can't find ';'-terminated segments.
+            if (options.MbTryExtractNullTerminatedAscii)
+            {
+                try
+                {
+                    // If embedded-ascii already yielded a lot, skip to avoid noisy duplication.
+                    bool alreadyGood = scene.Nodes != null && scene.Nodes.Count > 0;
+                    bool embeddedLooksGood = scene.MbExtractedAsciiStatementCount >= Math.Max(200, options.MbNullTerminatedHardMinStatements * 10);
+
+                    if (!embeddedLooksGood)
+                    {
+                        if (MayaMbNullTerminatedMaExtractor.TryReconstructCommandText(
+                                bytes,
+                                options,
+                                log,
+                                out string reconstructed,
+                                out int statementCount,
+                                out int score))
+                        {
+                            bool shouldParse = statementCount >= options.MbNullTerminatedHardMinStatements;
+                            if (!shouldParse && options.MbAllowLowConfidenceNullTerminatedAscii)
+                                shouldParse = true;
+
+                            if (shouldParse)
+                            {
+                                var ma = new MayaAsciiParser();
+                                var tmpScene = ma.ParseText($"{Path.GetFileName(path)}::mbNullTerminated", reconstructed, options, log);
+                                MayaSceneMerger.MergeInto(scene, tmpScene, log, provenanceTag: $"mb:nullTerminated(s={statementCount},score={score})");
+                                ApplyMbProvenanceFromProvenanceAttr(scene, "mb:nullTerminated", MayaNodeProvenance.MbNullTerminatedAscii);
+// keep a hint for audit
+                                scene.MbNullTerminatedStatementCount = statementCount;
+                                scene.MbNullTerminatedScore = score;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log.Warn($".mb null-terminated reconstruction failed (continue): {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+
             // ---- Step3: If still no nodes, create DAG placeholders ----
             try
             {
@@ -253,6 +343,21 @@ namespace MayaImporter.Core
             catch (Exception ex)
             {
                 log.Warn($".mb heuristic scene rebuild failed (continue): {ex.GetType().Name}: {ex.Message}");
+            }
+
+            // ---- Step3.5 (Phase1): If still empty, create chunk-index placeholder nodes (preservation-first) ----
+            try
+            {
+                if (scene.Nodes == null || scene.Nodes.Count == 0)
+                {
+                    var res = MayaMbFallbackChunkNodeRebuilder.EnsurePlaceholderNodesIfEmpty(scene, options, log);
+                    if (res.DidRun)
+                        log.Info($".mb Phase1 placeholder nodes: reason={res.Reason} created={res.CreatedNodes} chunkNodes={res.CreatedChunkNodes} depthNodes={res.CreatedDepthNodes}");
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Warn($".mb Phase1 chunk placeholder failed (continue): {ex.GetType().Name}: {ex.Message}");
             }
 
             // ---- Step4: Graph enrich (types + plug connections) ----
@@ -306,6 +411,48 @@ namespace MayaImporter.Core
             }
 
             return scene;
+        }
+
+        /// <summary>
+        /// Backfill strongly-typed provenance (NodeRecord.Provenance) from legacy
+        /// string-based provenance attribute (".provenance").
+        ///
+        /// This is used for .mb reconstruction paths that merge a temp ASCII-parsed scene
+        /// (e.g. null-terminated extraction) into the base .mb scene.
+        /// MayaSceneMerger stamps the ".provenance" attribute; we also want the audit
+        /// enum provenance so Phase6 can break down recovery routes deterministically.
+        /// </summary>
+        private static void ApplyMbProvenanceFromProvenanceAttr(MayaSceneData scene, string tagPrefix, MayaNodeProvenance prov)
+        {
+            if (scene == null || scene.Nodes == null || scene.Nodes.Count == 0) return;
+            if (string.IsNullOrEmpty(tagPrefix)) return;
+
+            foreach (var kv in scene.Nodes)
+            {
+                var n = kv.Value;
+                if (n == null || n.Attributes == null) continue;
+
+                if (!n.Attributes.TryGetValue(".provenance", out var v) || v == null) continue;
+                var tokens = v.ValueTokens;
+                if (tokens == null || tokens.Count == 0) continue;
+
+                bool hit = false;
+                for (int i = 0; i < tokens.Count; i++)
+                {
+                    var t = tokens[i];
+                    if (string.IsNullOrEmpty(t)) continue;
+                    if (t.IndexOf(tagPrefix, StringComparison.Ordinal) >= 0)
+                    {
+                        hit = true;
+                        break;
+                    }
+                }
+
+                if (!hit) continue;
+
+                // Prefer scene's policy to avoid overriding better provenance.
+                scene.MarkProvenance(n.Name, prov, tagPrefix);
+            }
         }
     }
 }

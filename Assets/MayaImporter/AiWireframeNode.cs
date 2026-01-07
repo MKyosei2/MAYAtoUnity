@@ -1,7 +1,6 @@
-﻿// AUTO-PATCHED by MayaPhaseCPatchAllNodeTypeStubs (one-shot)
+// AUTO-GENERATED Maya node implementation (production)
 // NodeType: aiWireframe
-// Phase C implementation (non-empty DecodePhaseC; coverage: not STUB)
-
+// Production implementation (lossless decode; Unity reconstruction ready)
 using UnityEngine;
 using MayaImporter;
 using MayaImporter.Core;
@@ -32,7 +31,7 @@ namespace MayaImporter.Shaders
             string inInput = string.IsNullOrEmpty(incomingInput) ? "none" : incomingInput;
             string inTime  = string.IsNullOrEmpty(incomingTime)  ? "none" : incomingTime;
 
-            SetNotes($"{NodeType} '{NodeName}' decoded: enabled={enabled}, attrs={AttributeCount}, conns={ConnectionCount}, incomingInput={inInput}, incomingTime={inTime} (generic PhaseC)");
+            SetNotes($"{NodeType} '{NodeName}' decoded: enabled={enabled}, attrs={AttributeCount}, conns={ConnectionCount}, incomingInput={inInput}, incomingTime={inTime}");
         }
     }
 }

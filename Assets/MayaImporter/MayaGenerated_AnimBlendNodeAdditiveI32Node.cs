@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 ﻿// NodeType: animBlendNodeAdditiveI32
 // FIX: publish via MayaImporter.Core.MayaFloatValue
 

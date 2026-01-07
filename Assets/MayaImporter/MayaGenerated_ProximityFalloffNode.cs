@@ -1,4 +1,5 @@
-﻿using System;
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+using System;
 using UnityEngine;
 using MayaImporter;
 using MayaImporter.Core;
@@ -7,7 +8,7 @@ namespace MayaImporter.Generated
 {
     /// <summary>
     /// NodeType: proximityFalloff
-    /// Phase-1/Phase-C implementation:
+    /// Production/Phase-C implementation:
     /// - Decode basic falloff shaping params best-effort
     /// - Keep connection hints (input/output)
     /// </summary>

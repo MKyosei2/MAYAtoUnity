@@ -6,9 +6,9 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Cluster Deformer
-    /// Phase-1:
-    /// - ApplyToUnity À‘•iSTUB’E‹pj
-    /// - ƒpƒ‰ƒ[ƒ^/Ú‘±‚ğƒfƒR[ƒh‚µAUnityã‚ÅuÄ\’z‚Å‚«‚éƒRƒ“ƒ|[ƒlƒ“ƒgv‚Æ‚µ‚Ä•Û
+    /// Production:
+    /// - ApplyToUnity å®Ÿè£…ï¼ˆSTUBè„±å´ï¼‰
+    /// - ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿/æ¥ç¶šã‚’ãƒ‡ã‚³ãƒ¼ãƒ‰ã—ã€Unityä¸Šã§ã€Œå†æ§‹ç¯‰ã§ãã‚‹ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã€ã¨ã—ã¦ä¿æŒ
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("cluster")]

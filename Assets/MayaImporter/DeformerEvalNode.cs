@@ -1,10 +1,11 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 using MayaImporter.Core;
 
 namespace MayaImporter.Phase3.Evaluation
 {
     /// <summary>
-    /// Deformeriskin / blendShape “™j‚Ì•]‰¿ƒm[ƒh
-    /// À•ÏŒ`‚Í Unity ‘¤‚ªs‚¤‚½‚ßA•]‰¿‚ÍuDirty “`”dv‚¾‚¯‚ğ’S‚¤
+    /// Deformerï¿½iskin / blendShape ï¿½ï¿½ï¿½jï¿½Ì•]ï¿½ï¿½ï¿½mï¿½[ï¿½h
+    /// ï¿½ï¿½ï¿½ÏŒ`ï¿½ï¿½ Unity ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ßAï¿½]ï¿½ï¿½ï¿½ÍuDirty ï¿½`ï¿½dï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Sï¿½ï¿½
     /// </summary>
     public class DeformerEvalNode : EvalNode
     {
@@ -19,15 +20,15 @@ namespace MayaImporter.Phase3.Evaluation
         protected override void Evaluate(EvalContext ctx)
         {
             // -----------------------------
-            // Deformer ©‘Ì‚Í CPU •]‰¿‚µ‚È‚¢
-            // –ğŠ„‚Íuo—Í attribute ‚ğ Dirty ‚É‚·‚év‚¾‚¯
+            // Deformer ï¿½ï¿½ï¿½Ì‚ï¿½ CPU ï¿½]ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Íuï¿½oï¿½ï¿½ attribute ï¿½ï¿½ Dirty ï¿½É‚ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½
             // -----------------------------
 
             if (ctx == null)
                 return;
 
-            // Maya “I‚É‚Í outMesh ‚ªXV‚³‚ê‚é
-            // attribute ‰ğ‘œ“x‚Å Dirty ‚ğ“`”d
+            // Maya ï¿½Iï¿½É‚ï¿½ outMesh ï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½
+            // attribute ï¿½ğ‘œ“xï¿½ï¿½ Dirty ï¿½ï¿½`ï¿½d
             ctx.MarkAttributeDirty($"{NodeName}.outMesh");
         }
     }

@@ -5,8 +5,8 @@ using MayaImporter.Utils;
 namespace MayaImporter.Deformers
 {
     /// <summary>
-    /// Maya Deformer ƒm[ƒh‹¤’ÊŠî’êB
-    /// SerializedAttribute ‚Ì“à•”\‘¢‚ÉˆË‘¶‚µ‚È‚¢B
+    /// Maya Deformer ãƒãƒ¼ãƒ‰å…±é€šåŸºåº•ã€‚
+    /// SerializedAttribute ã®å†…éƒ¨æ§‹é€ ã«ä¾å­˜ã—ãªã„ã€‚
     /// </summary>
     public abstract class MayaDeformerNodeBase : MayaNodeComponentBase
     {
@@ -19,8 +19,8 @@ namespace MayaImporter.Deformers
         protected DGConnectionResolver connectionResolver;
 
         /// <summary>
-        /// Deformer ‹¤’Ê‰Šú‰»iPhase1: Ä\’zj
-        /// Attribute –¼‚É‚ÍˆË‘¶‚¹‚¸AÅ‰‚É“Ç‚ß‚é float ‚ğ envelope ‚Æ‚µ‚Äˆµ‚¤B
+        /// Deformer å…±é€šåˆæœŸåŒ–ï¼ˆProduction: å†æ§‹ç¯‰ï¼‰
+        /// Attribute åã«ã¯ä¾å­˜ã›ãšã€æœ€åˆã«èª­ã‚ã‚‹ float ã‚’ envelope ã¨ã—ã¦æ‰±ã†ã€‚
         /// </summary>
         protected void InitializeDeformerCommon()
         {
@@ -38,7 +38,7 @@ namespace MayaImporter.Deformers
         }
 
         /// <summary>
-        /// Ú‘±‰ğŒˆiDGj
+        /// æ¥ç¶šè§£æ±ºï¼ˆDGï¼‰
         /// </summary>
         protected void ResolveConnections(MayaSceneData scene)
         {

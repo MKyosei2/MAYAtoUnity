@@ -1,5 +1,6 @@
-﻿// NodeType: animBlendNodeAdditiveRotation
-// Phase-1: meaningful decode + best-effort evaluation (Euler degrees)
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// NodeType: animBlendNodeAdditiveRotation
+// Production: meaningful decode + best-effort evaluation (Euler degrees)
 //
 // Best-effort semantics (Euler degrees):
 //  outEulerMaya = inputA * weightA + inputB * weightB

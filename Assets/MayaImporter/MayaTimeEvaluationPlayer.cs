@@ -1,3 +1,5 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+using System;
 using UnityEngine;
 
 namespace MayaImporter.Animation
@@ -13,6 +15,9 @@ namespace MayaImporter.Animation
     [DisallowMultipleComponent]
     public class MayaTimeEvaluationPlayer : MonoBehaviour
     {
+        /// <summary>Called after sampling (frame,timeSec). Safe hook for solvers.</summary>
+        public event Action<float, float> AfterSample;
+
         [Header("Playback")]
         public bool PlayOnStart = false;
 
@@ -116,7 +121,15 @@ namespace MayaImporter.Animation
         /// </summary>
         protected virtual void OnAfterSample(float frame, float timeSec)
         {
-            // no-op
+            // Optional callbacks (Phase3 graph evaluation etc.)
+            try
+            {
+                AfterSample?.Invoke(frame, timeSec);
+            }
+            catch (Exception)
+            {
+                // Never let callbacks break playback
+            }
         }
     }
 }

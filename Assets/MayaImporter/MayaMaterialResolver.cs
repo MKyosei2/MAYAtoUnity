@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using MayaImporter.Components;
@@ -14,7 +15,7 @@ namespace MayaImporter.Core
         private static readonly Dictionary<string, Material> _matCache =
             new Dictionary<string, Material>(StringComparer.Ordinal);
 
-        // š Shader –¼Õ“Ë‰ñ”ğFglobal::UnityEngine.Shader ‚ğg‚¤
+        //  Shader Õ“Ë‰Fglobal::UnityEngine.Shader g
         private static global::UnityEngine.Shader _fallbackShader;
 
         public static Material ResolveForMeshNode(string meshNodeName)

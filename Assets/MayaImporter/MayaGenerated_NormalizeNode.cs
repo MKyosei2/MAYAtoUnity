@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 ﻿// Assets/MayaImporter/MayaGenerated_NormalizeNode.cs
 // Duplicate-mapping fix:
 // - NormalizeNode.cs already maps [MayaNodeType("normalize")]

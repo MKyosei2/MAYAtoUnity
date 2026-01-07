@@ -1,10 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 
 namespace MayaImporter.Components
 {
     /// <summary>
     /// Maya texture (file / place2dTexture etc.) metadata holder.
-    /// Unityに無い概念や接続情報も含めて保持する（100点条件）。
+    /// Unityﾉ傍Oﾚ袋めて保司100_jB
     /// </summary>
     public sealed class MayaTextureMetadata : MonoBehaviour
     {

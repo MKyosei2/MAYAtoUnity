@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // NodeType: curveFromMeshEdge (Phase C: non-empty decode)
 
 using UnityEngine;

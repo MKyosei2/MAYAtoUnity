@@ -1,4 +1,5 @@
-﻿using System;
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -7,101 +8,148 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Phase-1: Deterministic NodeFactory.
-    /// Single source of truth: resolve by [MayaNodeType] attribute.
+    /// Deterministic NodeFactory:
+    /// - Resolves Maya nodeType -> Unity component type by [MayaNodeType] attribute.
+    /// - Unity-only (no Maya/Autodesk API).
     ///
-    /// IMPORTANT:
-    /// We do NOT hard-reference MayaNodeTypeAttribute type here (namespace may vary).
-    /// Instead we locate it via reflection by attribute name ("MayaNodeTypeAttribute")
-    /// and read its "NodeType" string property.
-    ///
-    /// Phase-1 guarantee:
-    /// - If duplicates exist, we still choose deterministically (by FullName ordinal sort),
-    ///   and we log a single error line per duplicated maya nodeType.
+    /// STRICT POLICY (portfolio-grade):
+    /// - 1 nodeType = 1 script (= 1 concrete component type)
+    /// - In Editor, duplicates cause FAIL FAST so issues are fixed at the source.
+    /// - In non-Editor builds, duplicates are logged and resolved deterministically.
     /// </summary>
     public static class NodeFactory
     {
         private const string MayaNodeTypeAttributeName = "MayaNodeTypeAttribute";
         private const string MayaNodeTypePropertyName = "NodeType";
 
+#if UNITY_EDITOR
+        private const bool StrictFailOnDuplicate = true;
+#else
+        private const bool StrictFailOnDuplicate = false;
+#endif
+
         private static readonly Dictionary<string, Type> _nodeTypeMap =
             new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
+        private static readonly Dictionary<string, List<Type>> _duplicateMap =
+            new Dictionary<string, List<Type>>(StringComparer.OrdinalIgnoreCase);
+
         private static bool _initialized;
+        private static bool _initializing;
 
         private static void Initialize()
         {
-            if (_initialized) return;
-            _initialized = true;
+            if (_initialized || _initializing) return;
+            _initializing = true;
 
-            _nodeTypeMap.Clear();
-
-            var baseType = typeof(MayaNodeComponentBase);
-
-            // 1) Collect all candidates first (so resolution does not depend on assembly/type scan order).
-            var candidates = new Dictionary<string, List<Type>>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            try
             {
-                Type[] types;
-                try { types = asm.GetTypes(); }
-                catch (ReflectionTypeLoadException ex) { types = ex.Types.Where(t => t != null).ToArray(); }
+                _nodeTypeMap.Clear();
+                _duplicateMap.Clear();
 
-                for (int ti = 0; ti < types.Length; ti++)
+                var baseType = typeof(MayaNodeComponentBase);
+
+                // 1) Collect all candidates (scan order independent).
+                var candidates = new Dictionary<string, List<Type>>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    var type = types[ti];
-                    if (type == null || type.IsAbstract) continue;
-                    if (!baseType.IsAssignableFrom(type)) continue;
+                    Type[] types;
+                    try { types = asm.GetTypes(); }
+                    catch (ReflectionTypeLoadException ex) { types = ex.Types.Where(t => t != null).ToArray(); }
+                    catch { continue; }
 
-                    var mayaTypes = GetMayaNodeTypesFromAttributes(type);
-                    if (mayaTypes == null || mayaTypes.Count == 0) continue;
-
-                    for (int i = 0; i < mayaTypes.Count; i++)
+                    for (int ti = 0; ti < types.Length; ti++)
                     {
-                        var mayaType = mayaTypes[i];
-                        if (string.IsNullOrEmpty(mayaType)) continue;
+                        var type = types[ti];
+                        if (type == null || type.IsAbstract) continue;
+                        if (!baseType.IsAssignableFrom(type)) continue;
 
-                        if (!candidates.TryGetValue(mayaType, out var list))
+                        var mayaTypes = GetMayaNodeTypesFromAttributes(type);
+                        if (mayaTypes == null || mayaTypes.Count == 0) continue;
+
+                        for (int i = 0; i < mayaTypes.Count; i++)
                         {
-                            list = new List<Type>(1);
-                            candidates[mayaType] = list;
-                        }
+                            var mayaType = mayaTypes[i];
+                            if (string.IsNullOrWhiteSpace(mayaType)) continue;
 
-                        if (!list.Contains(type))
-                            list.Add(type);
+                            mayaType = mayaType.Trim();
+
+                            // Guard against placeholder strings that sometimes appear in generator docs.
+                            if (mayaType == "..." || mayaType == "xxx")
+                            {
+                                Debug.LogError($"[MayaImporter] Invalid nodeType placeholder detected on type '{type.FullName}'. Remove it. nodeType='{mayaType}'");
+                                continue;
+                            }
+
+                            if (!candidates.TryGetValue(mayaType, out var list))
+                            {
+                                list = new List<Type>(1);
+                                candidates[mayaType] = list;
+                            }
+
+                            if (!list.Contains(type))
+                                list.Add(type);
+                        }
                     }
                 }
-            }
 
-            // 2) Resolve deterministically and report duplicates as errors.
-            int duplicateKinds = 0;
+                // 2) Detect duplicates and (optionally) fail.
+                int duplicateKinds = 0;
 
-            foreach (var kv in candidates)
-            {
-                var mayaType = kv.Key;
-                var list = kv.Value;
-
-                if (list == null || list.Count == 0)
-                    continue;
-
-                // Deterministic selection
-                var chosen = list
-                    .OrderBy(t => t.FullName, StringComparer.Ordinal)
-                    .First();
-
-                _nodeTypeMap[mayaType] = chosen;
-
-                if (list.Count > 1)
+                foreach (var kv in candidates)
                 {
-                    duplicateKinds++;
-                    var ordered = list.OrderBy(t => t.FullName, StringComparer.Ordinal).ToArray();
-                    Debug.LogError(
-                        $"[MayaImporter] Duplicate MayaNodeType '{mayaType}' mapped to {ordered.Length} types. " +
-                        $"Chosen='{chosen.FullName}'. All=[{string.Join(", ", ordered.Select(t => t.FullName))}]");
-                }
-            }
+                    var mayaType = kv.Key;
+                    var list = kv.Value;
+                    if (list == null || list.Count == 0) continue;
 
-            Debug.Log($"[MayaImporter] NodeFactory initialized: {_nodeTypeMap.Count} Maya node types. duplicates={duplicateKinds}");
+                    if (list.Count > 1)
+                    {
+                        duplicateKinds++;
+                        var ordered = list.OrderBy(t => t.FullName, StringComparer.Ordinal).ToList();
+                        _duplicateMap[mayaType] = ordered;
+
+                        Debug.LogError(
+                            $"[MayaImporter] DUPLICATE nodeType mapping detected: '{mayaType}' -> {ordered.Count} types. " +
+                            $"All=[{string.Join(", ", ordered.Select(t => t.FullName))}]");
+                    }
+                }
+
+                if (duplicateKinds > 0 && StrictFailOnDuplicate)
+                {
+                    throw new InvalidOperationException(
+                        $"[MayaImporter] NodeFactory STRICT FAIL: duplicate nodeType mappings detected: {duplicateKinds}. " +
+                        "Fix duplicates to satisfy '1 node = 1 script'. See Console for details.");
+                }
+
+                // 3) Build final map (deterministic).
+                foreach (var kv in candidates)
+                {
+                    var mayaType = kv.Key;
+                    var list = kv.Value;
+                    if (list == null || list.Count == 0) continue;
+
+                    var chosen = list
+                        .OrderBy(t => t.FullName, StringComparer.Ordinal)
+                        .First();
+
+                    _nodeTypeMap[mayaType] = chosen;
+
+                    if (list.Count > 1 && !StrictFailOnDuplicate)
+                    {
+                        Debug.LogError(
+                            $"[MayaImporter] Duplicate nodeType '{mayaType}' resolved deterministically. " +
+                            $"Chosen='{chosen.FullName}'. (Editor strict mode is OFF in this build)");
+                    }
+                }
+
+                _initialized = true;
+                Debug.Log($"[MayaImporter] NodeFactory initialized: {_nodeTypeMap.Count} nodeTypes, duplicates={duplicateKinds}, strict={(StrictFailOnDuplicate ? "ON" : "OFF")}");
+            }
+            finally
+            {
+                _initializing = false;
+            }
         }
 
         public static MayaNodeComponentBase CreateComponent(GameObject target, string mayaNodeType)
@@ -133,12 +181,20 @@ namespace MayaImporter.Core
             return _nodeTypeMap;
         }
 
+        /// <summary>
+        /// Returns duplicate mappings detected during initialization.
+        /// Empty means PASS for "1 nodeType = 1 script".
+        /// </summary>
+        public static IReadOnlyDictionary<string, List<Type>> GetDuplicateNodeTypes()
+        {
+            if (!_initialized) Initialize();
+            return _duplicateMap;
+        }
+
         // ---------- Attribute lookup (namespace-agnostic) ----------
 
         private static List<string> GetMayaNodeTypesFromAttributes(Type type)
         {
-            // We only match attributes that are named "...MayaNodeTypeAttribute"
-            // (full name includes namespace). This keeps it resilient.
             var attrs = type.GetCustomAttributes(inherit: false);
             if (attrs == null) return null;
 
@@ -150,18 +206,17 @@ namespace MayaImporter.Core
                 if (a == null) continue;
 
                 var at = a.GetType();
-                var name = at.Name; // "MayaNodeTypeAttribute"
-                if (!string.Equals(name, MayaNodeTypeAttributeName, StringComparison.Ordinal))
+                if (!string.Equals(at.Name, MayaNodeTypeAttributeName, StringComparison.Ordinal))
                     continue;
 
                 var prop = at.GetProperty(MayaNodeTypePropertyName, BindingFlags.Public | BindingFlags.Instance);
                 if (prop == null || prop.PropertyType != typeof(string)) continue;
 
                 var value = prop.GetValue(a) as string;
-                if (string.IsNullOrEmpty(value)) continue;
+                if (string.IsNullOrWhiteSpace(value)) continue;
 
                 result ??= new List<string>();
-                result.Add(value);
+                result.Add(value.Trim());
             }
 
             return result;

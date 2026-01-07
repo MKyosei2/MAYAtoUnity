@@ -6,9 +6,9 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Sine Deformer
-    /// Phase-1:
-    /// - ApplyToUnity À‘•iSTUB’E‹pj
-    /// - raw attrs/conns ‚ğ•Û‚µ‚½‚Ü‚ÜA‘ã•\“Iƒpƒ‰ƒ[ƒ^‚ğƒfƒR[ƒh‚µ‚ÄUnityã‚ÅÄ\’z‰Â”\‚É‚·‚é
+    /// Production:
+    /// - ApplyToUnity å®Ÿè£…ï¼ˆSTUBè„±å´ï¼‰
+    /// - raw attrs/conns ã‚’ä¿æŒã—ãŸã¾ã¾ã€ä»£è¡¨çš„ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ãƒ‡ã‚³ãƒ¼ãƒ‰ã—ã¦Unityä¸Šã§å†æ§‹ç¯‰å¯èƒ½ã«ã™ã‚‹
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("sine")]
@@ -37,7 +37,7 @@ namespace MayaImporter.Deformers
             // Common envelope
             envelope = Mathf.Clamp01(DeformerDecodeUtil.ReadFloat(this, envelope, ".envelope", "envelope", ".env", "env"));
 
-            // NonLinear commoni‘ã•\“IƒL[‚ğL‚ß‚ÉE‚¤j
+            // NonLinear commonï¼ˆä»£è¡¨çš„ã‚­ãƒ¼ã‚’åºƒã‚ã«æ‹¾ã†ï¼‰
             lowBound = DeformerDecodeUtil.ReadFloat(this, lowBound, ".lowBound", "lowBound", ".lb", "lb");
             highBound = DeformerDecodeUtil.ReadFloat(this, highBound, ".highBound", "highBound", ".hb", "hb");
             curvature = DeformerDecodeUtil.ReadFloat(this, curvature, ".curvature", "curvature", ".curv", "curv");
@@ -47,7 +47,7 @@ namespace MayaImporter.Deformers
             offset = DeformerDecodeUtil.ReadFloat(this, offset, ".offset", "offset", ".off", "off");
             dropoff = DeformerDecodeUtil.ReadFloat(this, dropoff, ".dropoff", "dropoff", ".do", "do");
 
-            // Sine specificiƒm[ƒhŒÅ—LƒL[—Dæ + ŒİŠ·ƒL[‚àE‚¤j
+            // Sine specificï¼ˆãƒãƒ¼ãƒ‰å›ºæœ‰ã‚­ãƒ¼å„ªå…ˆ + äº’æ›ã‚­ãƒ¼ã‚‚æ‹¾ã†ï¼‰
             sineAmplitude = DeformerDecodeUtil.ReadFloat(this, sineAmplitude,
                 ".sineAmplitude", "sineAmplitude", ".amplitude", "amplitude", ".sa", "sa");
             wavelength = DeformerDecodeUtil.ReadFloat(this, wavelength,
@@ -67,7 +67,7 @@ namespace MayaImporter.Deformers
                 yKeys: new[] { ".sineDirectionY", "sineDirectionY", ".directionY", "directionY" },
                 zKeys: new[] { ".sineDirectionZ", "sineDirectionZ", ".directionZ", "directionZ" });
 
-            // MatricesiÚ‘±—Dæj
+            // Matricesï¼ˆæ¥ç¶šå„ªå…ˆï¼‰
             var hmPlug = FindIncomingPlugByDstContains("handleMatrix", "hm", "handle");
             if (!string.IsNullOrEmpty(hmPlug) && DeformerDecodeUtil.TryResolveConnectedMatrix(hmPlug, out var hm))
                 handleMatrix = hm;

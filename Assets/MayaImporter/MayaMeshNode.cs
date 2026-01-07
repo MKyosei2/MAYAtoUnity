@@ -1,10 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 
 namespace MayaImporter.Geometry
 {
     /// <summary>
-    /// Maya Mesh ƒm[ƒh1‚Â‚É‘Î‰‚·‚é Unity ‘¤ƒNƒ‰ƒX
-    /// Maya–¢ƒCƒ“ƒXƒg[ƒ‹ŠÂ‹«‚Å Mesh ‚ğÄ\’z‚·‚éÓ–±‚ğ‚Â
+    /// Maya Mesh m[h1Â‚É‘Î‰ Unity NX
+    /// MayaCXg[Â‹ Mesh Ä\zÓ–
     /// </summary>
     public class MayaMeshNode : MonoBehaviour
     {
@@ -18,7 +19,7 @@ namespace MayaImporter.Geometry
         public Vector2[] uvs;
 
         /// <summary>
-        /// Maya Mesh î•ñ‚©‚ç Unity Mesh ‚ğ¶¬
+        /// Maya Mesh ñ‚©‚ Unity Mesh ğ¶
         /// </summary>
         public Mesh BuildMesh()
         {
@@ -43,7 +44,7 @@ namespace MayaImporter.Geometry
         }
 
         /// <summary>
-        /// Mesh ‚ğ GameObject ‚É“K—p
+        /// Mesh  GameObject É“Kp
         /// </summary>
         public void Apply()
         {

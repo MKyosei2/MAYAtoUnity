@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using MayaImporter.Core;

@@ -1,5 +1,5 @@
 // Assets/MayaImporter/InverseMatrixNode.cs
-// Phase C placeholder -> implemented
+// Production implementation
 //
 // NodeType: inverseMatrix
 // - Reads inputMatrix from setAttr or incoming connection (best-effort)

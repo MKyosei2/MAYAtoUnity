@@ -1,5 +1,6 @@
-﻿// NodeType: animBlendNodeAdditiveScale
-// Phase-1: meaningful decode + best-effort evaluation (Vector3 scale)
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// NodeType: animBlendNodeAdditiveScale
+// Production: meaningful decode + best-effort evaluation (Vector3 scale)
 //
 // Best-effort semantics:
 //  out = inputA * weightA + inputB * weightB

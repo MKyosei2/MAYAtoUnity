@@ -1,20 +1,26 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
-using MayaImporter.Components;
 using UnityEngine;
 
 namespace MayaImporter.Core
 {
     /// <summary>
     /// Phase B-6:
-    /// ‹Œ gMaterialApplyTool(è“®)h ‘Š“–‚ğ Importer ‚É“‡B
-    /// - Renderers ‚É‘Î‚µ shadingEngine / per-face ‚ÌŠ„“–‚ğ best-effort ‚Å“K—p
-    /// - –¢‘Î‰‚Å‚à UnknownComponent “™‚Ì•Û‚ÅŒ‡‘¹ƒ[ƒiimport‚Í~‚ß‚È‚¢j
+    /// Importer å†…ã§ Material è‡ªå‹•é©ç”¨ã‚’è¡Œã† (Unity-only / Mayaä¸è¦)ã€‚
+    ///
+    /// æ–¹é‡:
+    /// - Renderer ã«å¯¾ã—ã¦ shadingEngine / per-face æƒ…å ±ã‚’ best-effort ã§é©ç”¨
+    /// - å¤±æ•—ã—ã¦ã‚‚ Import ã‚’æ­¢ã‚ãªã„ (UnknownComponent ç­‰ã§ä¿æŒ)
+    ///
+    /// Phase-7:
+    /// - fallback / no-meta ç­‰ã® "ä»®" çµŒè·¯ã‚’ MayaProvisionalMarker ã¨ã—ã¦è¨˜éŒ²ã—ã€
+    ///   å¾Œã‹ã‚‰æœ¬å®Ÿè£…åŒ–ã®å„ªå…ˆé †ä½ä»˜ã‘ãŒã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹ã€‚
     /// </summary>
     public static class MayaMaterialAutoApply
     {
         /// <summary>
-        /// Importer“à‚©‚çŒÄ‚Î‚ê‚é‘z’èiScriptedImporterjB
-        /// ‚±‚±‚Å‚Í g—áŠO‚ğ“Š‚°‚È‚¢h ‚ğÅ—Dæ‚É‚·‚éB
+        /// ScriptedImporter ã‹ã‚‰å‘¼ã°ã‚Œã‚‹æƒ³å®šã€‚
+        /// ã“ã“ã§ã¯ "ä¾‹å¤–ã‚’å‡ºã•ãšã«" é©ç”¨ã§ãã‚‹ç¯„å›²ã ã‘é©ç”¨ã™ã‚‹ã€‚
         /// </summary>
         public static void Run_BestEffort(Transform sceneRoot, MayaSceneData scene, MayaImportOptions options, MayaImportLog log)
         {
@@ -25,7 +31,7 @@ namespace MayaImporter.Core
 
             try
             {
-                // MeshRenderer / SkinnedMeshRenderer —¼•û‚É‘Î‰
+                // MeshRenderer / SkinnedMeshRenderer ä¸¡æ–¹å¯¾å¿œ
                 var renderers = sceneRoot.GetComponentsInChildren<Renderer>(true);
 
                 for (int i = 0; i < renderers.Length; i++)
@@ -33,19 +39,11 @@ namespace MayaImporter.Core
                     var r = renderers[i];
                     if (r == null) continue;
 
-                    // 1) Maya‘¤‚ÌŠ„“–î•ñ‚ğ‚ÂƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’T‚·iŠù‘¶À‘•‚É‡‚í‚¹ best-effortj
-                    // ‘ã•\—á:
-                    // - MayaMeshAssignmentMetadata: shadingEngineName / perFace mapping
-                    // - MayaShadingGroupRef: shadingEngineName
-                    //
-                    // ‚±‚±‚ÍƒvƒƒWƒFƒNƒg‚ÉŠù‘¶‚ª‚ ‚é‘z’è‚ÅAŒ©‚Â‚©‚Á‚½‚à‚Ì‚¾‚¯“K—p‚·‚éB
-                    string shadingEngineName = null;
-
-                    // ƒpƒ^[ƒ“A: ‚æ‚­‚ ‚é gshadingEngineNameh ‚ğ‚ÂƒRƒ“ƒ|[ƒlƒ“ƒg
-                    //iŒ^‚ª–³‚¢ê‡‚Å‚àƒRƒ“ƒpƒCƒ‹‚Å‚«‚é‚æ‚¤A”½Ë‚Åbest-effortj
-                    shadingEngineName = TryGetStringFieldOrProperty(r.gameObject, "shadingEngineName")
-                                     ?? TryGetStringFieldOrProperty(r.gameObject, "ShadingEngineName")
-                                     ?? TryGetStringFieldOrProperty(r.gameObject, "shadingEngine");
+                    // best-effort: shadingEngineName ã‚’æŒã¤ãƒ¡ã‚¿ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’åå°„ã§æ¢ã™
+                    string shadingEngineName =
+                        TryGetStringFieldOrProperty(r.gameObject, "shadingEngineName") ??
+                        TryGetStringFieldOrProperty(r.gameObject, "ShadingEngineName") ??
+                        TryGetStringFieldOrProperty(r.gameObject, "shadingEngine");
 
                     if (string.IsNullOrEmpty(shadingEngineName))
                         continue;
@@ -53,9 +51,18 @@ namespace MayaImporter.Core
                     var mat = MayaMaterialResolver.ResolveFromSceneBestEffort(sceneRoot, scene, shadingEngineName, options, log);
                     if (mat == null) continue;
 
-                    // 2) Renderer‚Ö“K—piper-face‚ÍUnity•W€‚Å‚Í submesh/material index ‘O’ñj
-                    // ‚±‚±‚Å‚ÍÅ’áŒÀ gRenderer.material(0)h ‚É“–‚Ä‚ÄŒ©‚½–Ú‚ğo‚·B
-                    // Šù‘¶‚Å submesh/material array ‚ğì‚Á‚Ä‚¢‚éê‡‚Íã‘‚«‚µ‚È‚¢B
+                    // Phase-7: fallback / no-meta ã‚’ãƒãƒ¼ã‚¯ (çµæœã¯å¤‰ãˆãªã„)
+                    try
+                    {
+                        if (IsFallback(mat))
+                        {
+                            var detail = $"shadingEngine={shadingEngineName} mat={mat.name}";
+                            MayaProvisionalMarker.Ensure(r.gameObject, MayaProvisionalKind.MaterialFallbackOrNoMeta, detail);
+                        }
+                    }
+                    catch { }
+
+                    // Renderer ã«é©ç”¨ (per-face ã¯ Unity æ¨™æº–ã ã‘ã§ã¯å®Œå…¨å†ç¾ãŒé›£ã—ã„ãŸã‚ã€ã“ã“ã¯æœ€ä½é™)
                     var shared = r.sharedMaterials;
                     if (shared == null || shared.Length == 0)
                     {
@@ -63,7 +70,6 @@ namespace MayaImporter.Core
                     }
                     else
                     {
-                        // Šù‘¶”z—ñ‚Ì0”Ô‚¾‚¯ gŒ‡‘¹‚ÌŒŠh ‚ğ–„‚ß‚é
                         if (shared[0] == null || IsFallback(shared[0]))
                         {
                             shared[0] = mat;
@@ -81,9 +87,11 @@ namespace MayaImporter.Core
         private static bool IsFallback(Material m)
         {
             if (m == null) return false;
-            // fallback‚Í gSE__h ‚â gMesh__h ‚Æ‚¢‚Á‚½–½–¼‚ª‘½‚¢‘z’èibest-effortj
             var n = m.name ?? "";
-            return n.StartsWith("SE__", StringComparison.Ordinal) || n.StartsWith("Mesh__", StringComparison.Ordinal) || n.Contains("__NoMeta__");
+            // fallback ã¯ "SE__" "Mesh__" ç­‰ã®åå‰ãŒå¤šã„æƒ³å®š (best-effort)
+            return n.StartsWith("SE__", StringComparison.Ordinal) ||
+                   n.StartsWith("Mesh__", StringComparison.Ordinal) ||
+                   n.Contains("__NoMeta__");
         }
 
         private static string TryGetStringFieldOrProperty(GameObject go, string memberName)

@@ -1,10 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using UnityEngine;
 
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Unity Transform ‚¾‚¯‚Å‚Í•\Œ»‚Å‚«‚È‚¢ Maya ‚Ì transform stack î•ñ‚ğ•Û‚·‚éB
-    /// u100%v‚Ìª‹’: ‚±‚±‚É g¸‚í‚ê‚é‰Â”\«‚Ì‚ ‚éî•ñh ‚ğ•K‚¸•Û‚µAUnity‘¤‚Å«—ˆÄŒ»/ŒŸØ‚Å‚«‚éó‘Ô‚É‚·‚éB
+    /// Unity Transform ã ã‘ã§ã¯è¡¨ç¾ã§ããªã„ Maya ã® transform stack æƒ…å ±ã‚’ä¿æŒã™ã‚‹ã€‚
+    /// ã€Œ100%ã€ã®æ ¹æ‹ : ã“ã“ã« â€œå¤±ã‚ã‚Œã‚‹å¯èƒ½æ€§ã®ã‚ã‚‹æƒ…å ±â€ ã‚’å¿…ãšä¿æŒã—ã€Unityå´ã§å°†æ¥å†ç¾/æ¤œè¨¼ã§ãã‚‹çŠ¶æ…‹ã«ã™ã‚‹ã€‚
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MayaTransformExtrasComponent : MonoBehaviour
@@ -31,7 +32,7 @@ namespace MayaImporter.Core
         public Vector3 ScalePivotTranslate;
 
         /// <summary>
-        /// Maya shear (XY, XZ, YZ) BUnity Transform ‚Å‚Í•\Œ»•s‰ÂB
+        /// Maya shear (XY, XZ, YZ) ã€‚Unity Transform ã§ã¯è¡¨ç¾ä¸å¯ã€‚
         /// </summary>
         public Vector3 Shear;
 
@@ -58,7 +59,13 @@ namespace MayaImporter.Core
         [Tooltip("Local TRS-only matrix converted to Unity space (does NOT include pivots/shear/opm).")]
         public Matrix4x4 LocalTrsMatrixUnity = Matrix4x4.identity;
 
-        [Tooltip("True if any pivot/shear/axis info exists (meaning TRS-only‚Å‚Í•s‘«‚Ì‰Â”\«‚ª‚ ‚é).")]
+[Tooltip("Local FULL matrix in Maya space (includes pivots/shear/rotateAxis/offsetParentMatrix when available).")]
+public Matrix4x4 LocalFullMatrixMaya = Matrix4x4.identity;
+
+[Tooltip("Local FULL matrix converted to Unity space (includes pivots/shear/rotateAxis/offsetParentMatrix when available).")]
+public Matrix4x4 LocalFullMatrixUnity = Matrix4x4.identity;
+
+        [Tooltip("True if any pivot/shear/axis info exists (meaning TRS-onlyã§ã¯ä¸è¶³ã®å¯èƒ½æ€§ãŒã‚ã‚‹).")]
         public bool HasNonTrsExtras;
     }
 }

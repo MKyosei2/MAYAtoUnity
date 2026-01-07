@@ -1,4 +1,5 @@
-﻿using System;
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -33,7 +34,7 @@ namespace MayaImporter.Core
             if (scene == null || scene.Nodes == null || scene.Nodes.Count == 0)
                 return root;
 
-            // --- Phase-1 deterministic ordering ---
+            // --- Production deterministic ordering ---
             var records = scene.Nodes.Values
                 .Where(r => r != null && !string.IsNullOrEmpty(r.Name))
                 .OrderBy(r => r.Name, StringComparer.Ordinal)

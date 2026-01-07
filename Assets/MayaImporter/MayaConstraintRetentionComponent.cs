@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,11 +7,11 @@ namespace MayaImporter.Core
 {
     /// <summary>
     /// Phase C-6:
-    /// Unity•W€‚ÉŠT”O‚ª–³‚¢/Š®‘Sˆê’v‚ª“ï‚µ‚¢ gConstraint/IK/Expression/Drivenh“™‚ğ
-    /// gŒ‡‘¹ƒ[ƒh ‚Å•Û‚·‚é‚½‚ß‚ÌƒXƒiƒbƒvƒVƒ‡ƒbƒgB
+    /// UnityWÉŠTO/Svï‚µ gConstraint/IK/Expression/Drivenh
+    /// g[h Å•Ûé‚½ß‚ÌƒXibvVbgB
     ///
-    /// ‚±‚±‚Å‚Í gŒ^‚ª‰½‚Å‚ ‚êh –¼‘O‚ÅE‚Á‚Äˆê——‰»‚·‚éiƒvƒƒWƒFƒNƒg·ˆÙ‚É‹­‚¢jB
-    /// Ú×‚ÍŠù‘¶‚ÌŠeƒRƒ“ƒ|[ƒlƒ“ƒg‘¤‚ª•Û‚µ‚Ä‚¢‚é‘O’ñB
+    /// Å‚ g^Å‚h OÅEÄˆê——ivWFNgÙ‚É‹jB
+    /// Ú×‚ÍŠÌŠeR|[lgÛÄ‚OB
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MayaConstraintRetentionComponent : MonoBehaviour

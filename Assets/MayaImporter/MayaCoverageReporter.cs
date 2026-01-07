@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -70,7 +71,7 @@ namespace MayaImporter.Core
             var animLimitations = MayaAnimationEvaluationLimitationsReporter.Collect(scene);
             var shadingLimitations = MayaShadingNetworkLimitationsReporter.Collect(scene);
 
-            // NEW: dynamics / FX limitations (Unity‚ÉŠT”O‚ª–³‚¢‚à‚Ì)
+            // NEW: dynamics / FX limitations (UnityÉŠTO)
             var dynamicsFxLimitations = MayaDynamicsFxLimitationsReporter.Collect(scene);
 
             return new CoverageResult

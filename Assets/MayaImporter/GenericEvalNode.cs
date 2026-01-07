@@ -1,21 +1,22 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 using MayaImporter.Core;
 
 namespace MayaImporter.Phase3.Evaluation
 {
     /// <summary>
-    /// Phase3 ‰Šú’iŠK—p‚Ì”Ä—pƒm[ƒh
-    /// À—pˆÀ’è‰»‚Æ‚µ‚ÄuŠÔ‹ì“®ƒm[ƒhianimCurvejv‚ğ‹N“_‚É‚·‚é‹@”\‚ğ’Ç‰Á
+    /// Phase3 ï¿½ï¿½ï¿½ï¿½ï¿½iï¿½Kï¿½pï¿½Ì”Ä—pï¿½mï¿½[ï¿½h
+    /// ï¿½ï¿½ï¿½pï¿½ï¿½ï¿½è‰»ï¿½Æ‚ï¿½ï¿½Äuï¿½ï¿½ï¿½Ô‹ì“®ï¿½mï¿½[ï¿½hï¿½ianimCurveï¿½jï¿½vï¿½ï¿½ï¿½Nï¿½_ï¿½É‚ï¿½ï¿½ï¿½@ï¿½\ï¿½ï¿½Ç‰ï¿½
     /// </summary>
     public class GenericEvalNode : EvalNode
     {
-        // š Time •Ï‰»‚Å Dirty ‚É‚·‚×‚«‚©
+        // ï¿½ï¿½ Time ï¿½Ï‰ï¿½ï¿½ï¿½ Dirty ï¿½É‚ï¿½ï¿½×‚ï¿½ï¿½ï¿½
         public bool IsTimeDriven { get; private set; }
 
         public GenericEvalNode(string nodeName)
             : base(nodeName)
         {
-            // nodeName ‚¾‚¯‚Å‚Í–{—ˆ”»’è‚Å‚«‚È‚¢‚ªA
-            // Phase3 ˆÀ’è‰»‚Ì‚½‚ß EvalGraphBuilder ‚Å SetTimeDriven ‚ğŒÄ‚Ô‘O’ñ‚É‚·‚é
+            // nodeName ï¿½ï¿½ï¿½ï¿½ï¿½Å‚Í–{ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½A
+            // Phase3 ï¿½ï¿½ï¿½è‰»ï¿½Ì‚ï¿½ï¿½ï¿½ EvalGraphBuilder ï¿½ï¿½ SetTimeDriven ï¿½ï¿½ï¿½Ä‚Ô‘Oï¿½ï¿½É‚ï¿½ï¿½ï¿½
             IsTimeDriven = false;
         }
 
@@ -26,7 +27,7 @@ namespace MayaImporter.Phase3.Evaluation
 
         protected override void Evaluate(EvalContext ctx)
         {
-            // Generic ‚Í‰½‚à‚µ‚È‚¢iˆË‘¶ŠÖŒW‚Ì“`”d‚¾‚¯’S“–j
+            // Generic ï¿½Í‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½iï¿½Ë‘ï¿½ï¿½ÖŒWï¿½Ì“`ï¿½dï¿½ï¿½ï¿½ï¿½ï¿½Sï¿½ï¿½ï¿½j
         }
     }
 }

@@ -3,8 +3,8 @@ using UnityEngine;
 namespace MayaImporter.Runtime
 {
     /// <summary>
-    /// Portfolio proof component:
-    /// Import結果の「監査情報」をRootに残す（Unity-onlyで100%主張を支える）。
+    /// Portfolio proof component (Unity-only):
+    /// Stores import identity + preservation counters on the imported root.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MayaImportedRootInfo : MonoBehaviour
@@ -15,6 +15,24 @@ namespace MayaImporter.Runtime
         public int schemaVersion;
         public string rawSha256;
 
+        [Header("Source Size")]
+        public int rawByteCount;
+
+        [Header(".mb Chunk Index (best-effort)")]
+        public string mbHeader4CC;
+        public int mbChunkCount;
+        public int mbExtractedStringCount;
+
+        [Header(".mb Embedded ASCII (best-effort)")]
+        public int mbExtractedAsciiChars;
+        public int mbExtractedAsciiStatements;
+        public int mbExtractedAsciiScore;
+        public bool mbEmbeddedAsciiParsed;
+
+        [Header(".mb Preservation Fallback (Production)")]
+        public bool mbUsedChunkPlaceholderNodes;
+        public string mbFallbackReason;
+
         [Header("Scene Counts")]
         public int nodeCount;
         public int connectionCount;
@@ -23,11 +41,6 @@ namespace MayaImporter.Runtime
         public int unityNodeComponentCount;
         public int unknownNodeComponentCount;
         public int opaqueRuntimeNodeCount;
-
-        [Header(".mb Embedded ASCII (best-effort)")]
-        public int mbExtractedAsciiChars;
-        public int mbExtractedAsciiStatements;
-        public int mbExtractedAsciiScore;
 
         [Header("Import Log")]
         public int warningCount;

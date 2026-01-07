@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,30 +7,30 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// .ma(ASCII) ‚Ì mesh NodeRecord ‚ğuMaya–³‚µv‚Å•œŒ³‚·‚éƒfƒR[ƒ_B
+    /// .ma(ASCII)  mesh NodeRecord uMayavÅ•fR[_B
     ///
-    /// –Ú“I:
-    /// - Unity Mesh ‚Éû‚Ü‚é”ÍˆÍ‚ÍÀƒƒbƒVƒ…‰»
-    /// - Unity ‚ÉŠT”O‚ª–³‚¢/§ŒÀ‚ª‚ ‚é—v‘f‚àARawTokens/DecodedExtras ‚Æ‚µ‚Ä•Û‚µu100%ƒf[ƒ^•Ûv‚ğ’S•Û
+    /// Ú“I:
+    /// - Unity Mesh ÉÜ‚ÍˆÍ‚ÍbV
+    /// - Unity ÉŠTO/vfARawTokens/DecodedExtras Æ‚Ä•Ûu100%f[^ÛvS
     ///
-    /// ‘Î‰(ƒxƒXƒgƒGƒtƒH[ƒg):
+    /// Î‰(xXgGtH[g):
     /// - vertices: vt/pt/pnts (float3)
-    /// - polyFaces: fc[...] ‚Ì token stream ‚©‚ç f/mu/mn/ed/h ‚ğ‰Â”\‚È”ÍˆÍ‚Å‰ğÍ
+    /// - polyFaces: fc[...]  token stream  f/mu/mn/ed/h Â”\È”ÍˆÍ‚Å‰
     /// - UV: uvst[i].uvsp
-    /// - normals: n[...] + (mn/mf) ‚É‚æ‚é face-varying normal id („’è)
-    /// - holes: h token ‚Í‰ğÍ‚µAUnity‘¤‚Íu•Û‘¶{ŠOü‚Ì‚İOŠp‰»v(‹Šo·‚ªo‚é‰Â”\«) ‚ğ‹–—e
+    /// - normals: n[...] + (mn/mf) É‚ face-varying normal id ()
+    /// - holes: h token Í‰Í‚AUnityÍuÛ‘{OÌ‚İOpv(ooÂ”\) e
     /// </summary>
     public static class MayaMaMeshDecoder
     {
         public sealed class Decoded
         {
-            // Expanded stream (face-varying UV/Normals ‘Î‰)
+            // Expanded stream (face-varying UV/Normals Î‰)
             public Vector3[] Vertices;
-            public Vector3[] Normals; // null‰Â
+            public Vector3[] Normals; // null
             public List<Vector2[]> UvSets = new List<Vector2[]>(); // 0..7
-            public Color[] Colors; // null‰Â
+            public Color[] Colors; // null
 
-            public int[] Triangles; // single-submesh triangles (submesh partition‚ÍãˆÊ‚Å)
+            public int[] Triangles; // single-submesh triangles (submesh partitionÍÊ‚)
             public int[] ExpandedToOriginalVertex;
 
             // Extras / audit
@@ -71,7 +72,7 @@ namespace MayaImporter.Core
             // -------- faces --------
             if (!TryParsePolyFaces(meshShape, out var faces, out var maxUvSetIndexInFaces, out var anyHoles, out var holeFaceCount, out var anyFaceVaryingNormalIds))
             {
-                // faces‚ª–³‚­‚Ä‚à vertices ‚ğ•Û‚µ‚½‚¢ƒP[ƒX‚ª‚ ‚é‚Ì‚Åu¬Œ÷v‚Æ‚µ‚Ä•Ô‚·(ƒ|ƒCƒ“ƒgƒNƒ‰ƒEƒhˆµ‚¢)
+                // facesÄ‚ vertices ÛP[XÌ‚ÅuvÆ‚Ä•Ô‚(|CgNEh)
                 decoded = new Decoded
                 {
                     Vertices = vertsMaya,
@@ -170,7 +171,7 @@ namespace MayaImporter.Core
                 if (f == null || f.V == null || f.V.Count < 3)
                     continue;
 
-                // NOTE: holes‚ª‚ ‚éê‡‚Å‚àA‚±‚±‚ÍŠOü‚Ì‚İƒtƒ@ƒ“•ªŠ„(holes‚Íextras‚Æ‚µ‚Ä•Û)
+                // NOTE: holesê‡Å‚AÍŠOÌ‚İƒt@(holesextrasÆ‚Ä•Û)
                 int n = f.V.Count;
                 for (int i = 1; i + 1 < n; i++)
                 {
@@ -665,7 +666,7 @@ namespace MayaImporter.Core
         {
             if (raw == null || raw.ValueTokens == null) return new List<string>(0);
 
-            // remove "setAttr -type ..." —R—ˆ‚Ì quote “™‚ğ‚±‚±‚Å‚Íˆµ‚í‚¸A”’l‚ÌToken‚¾‚¯g‚¤
+            // remove "setAttr -type ..." R quote Å‚Íˆí‚¸AlTokeng
             var t = raw.ValueTokens;
             if (t.Count == 0) return new List<string>(0);
 

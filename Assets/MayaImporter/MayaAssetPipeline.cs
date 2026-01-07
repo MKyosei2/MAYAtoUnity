@@ -1,4 +1,4 @@
-﻿// Assets/MayaImporter/MayaAssetPipeline.cs
+// Assets/MayaImporter/MayaAssetPipeline.cs
 #if UNITY_EDITOR
 using System;
 using System.Collections;
@@ -13,7 +13,7 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Phase1 Assetization:
+    /// Production Assetization:
     /// - Legacy(手動Window導線): 生成した Scene の GameObject から Mesh/Material/Texture/Anim/Prefab を Assets に保存
     /// - Importer導線(ScriptedImporter想定): AssetImportContext に SubAsset として登録し、メインObjectを設定
     ///
@@ -27,7 +27,7 @@ namespace MayaImporter.Core
         /// <summary>
         /// Legacy導線（EditorWindow等）:
         /// Scene上に生成した root を、Assetsに保存（Mesh/Mat/Texture/Anim/Prefab）します。
-        /// ※ Phase1 推奨は ScriptedImporter だが、比較/デバッグ用に残す。
+        /// ※ Production 推奨は ScriptedImporter だが、比較/デバッグ用に残す。
         /// </summary>
         public static void AssetizeImportedRoot(GameObject importedRoot, MayaSceneData scene, MayaImportOptions options, MayaImportLog log)
         {

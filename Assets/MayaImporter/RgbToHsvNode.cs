@@ -1,6 +1,6 @@
-﻿// MayaImporter/RgbToHsvNode.cs
+// MayaImporter/RgbToHsvNode.cs
 // NodeType: rgbToHsv
-// Phase-1 (real decode + value publish)
+// Production (real decode + value publish)
 //
 // Publishes:
 // - MayaVector3Value : outHsv = (H,S,V) in xyz

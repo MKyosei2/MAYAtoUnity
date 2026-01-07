@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using MayaImporter.Components;
@@ -8,8 +9,8 @@ namespace MayaImporter.Core
 {
     /// <summary>
     /// Post process after all ApplyToUnity() stages:
-    /// - Mesh‚ªæ‚É‰¼Material‚ðŽ‚Á‚Ä‚µ‚Ü‚¤–â‘è‚ðAÅIƒpƒX‚ÅŠm’èMaterial‚Öã‘‚«‚µ‚Ä‰ðŒˆ
-    /// - shadingEngine -> material metadata -> textures ‚ð’H‚Á‚Ä Unity Material ‚ð\’z•“K—p
+    /// - MeshÉ‰MaterialÄ‚Ü‚AÅIpXÅŠmMaterialÖã‘Ä‰
+    /// - shadingEngine -> material metadata -> textures H Unity Material \zKp
     /// </summary>
     public static class MayaMaterialPostProcessor
     {

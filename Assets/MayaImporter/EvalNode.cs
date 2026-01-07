@@ -1,28 +1,31 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 using System.Collections.Generic;
+using UnityEngine;
+using MayaImporter.Core;
 
 namespace MayaImporter.Phase3.Evaluation
 {
     /// <summary>
-    /// •]‰¿’PˆÊinodej
-    /// attribute ’PˆÊ‚ÌˆË‘¶‚ğŒ©‚ÄA•K—v‚È‚Æ‚«‚¾‚¯•]‰¿‚·‚é
+    /// ï¿½]ï¿½ï¿½ï¿½Pï¿½Êinodeï¿½j
+    /// attribute ï¿½Pï¿½Ê‚ÌˆË‘ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÄAï¿½Kï¿½vï¿½È‚Æ‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public abstract class EvalNode
     {
         public string NodeName { get; }
 
         // -----------------------------
-        // Dirty ŠÇ—inode ’PˆÊj
+        // Dirty ï¿½Ç—ï¿½ï¿½inode ï¿½Pï¿½Êj
         // -----------------------------
         public bool Dirty { get; private set; } = true;
 
         // -----------------------------
-        // ˆË‘¶ŠÖŒWinodej
+        // ï¿½Ë‘ï¿½ï¿½ÖŒWï¿½inodeï¿½j
         // -----------------------------
         protected readonly List<EvalNode> _inputs = new();
         public IReadOnlyList<EvalNode> Inputs => _inputs;
 
         // -----------------------------
-        // š attribute ’PˆÊ‚Ì“ü—ÍˆË‘¶
+        // ï¿½ï¿½ attribute ï¿½Pï¿½Ê‚Ì“ï¿½ï¿½ÍˆË‘ï¿½
         // -----------------------------
         private readonly HashSet<string> _inputAttributes = new();
         public IReadOnlyCollection<string> InputAttributes => _inputAttributes;
@@ -33,7 +36,7 @@ namespace MayaImporter.Phase3.Evaluation
         }
 
         // -----------------------------
-        // Dependency “o˜^
+        // Dependency ï¿½oï¿½^
         // -----------------------------
         public void AddInput(EvalNode node)
         {
@@ -48,7 +51,7 @@ namespace MayaImporter.Phase3.Evaluation
         }
 
         // -----------------------------
-        // Dirty §Œä
+        // Dirty ï¿½ï¿½ï¿½ï¿½
         // -----------------------------
         public void MarkDirty()
         {
@@ -57,7 +60,7 @@ namespace MayaImporter.Phase3.Evaluation
 
             Dirty = true;
 
-            // ‰º—¬‚Ö“`”dinode ’PˆÊj
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ö“`ï¿½dï¿½inode ï¿½Pï¿½Êj
             foreach (var n in _inputs)
                 n.MarkDirty();
         }
@@ -68,16 +71,16 @@ namespace MayaImporter.Phase3.Evaluation
         }
 
         // -----------------------------
-        // Evaluationiš–{À‘•j
+        // Evaluationï¿½iï¿½ï¿½ï¿½{ï¿½ï¿½ï¿½ï¿½ï¿½j
         // -----------------------------
         public void EvaluateIfNeeded(EvalContext ctx)
         {
-            // 1. node ‚ª Dirty ‚Å‚È‚¢ ¨ ‰½‚à‚µ‚È‚¢
+            // 1. node ï¿½ï¿½ Dirty ï¿½Å‚È‚ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
             if (!Dirty)
                 return;
 
-            // 2. attribute ˆË‘¶‚ª‚ ‚éê‡A
-            //    ©•ª‚ªˆË‘¶‚µ‚Ä‚¢‚é attribute ‚ª•ÏX‚³‚ê‚Ä‚¢‚È‚¯‚ê‚Î skip
+            // 2. attribute ï¿½Ë‘ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‡ï¿½A
+            //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë‘ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ attribute ï¿½ï¿½ï¿½ÏXï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½ skip
             if (_inputAttributes.Count > 0 &&
                 ctx != null &&
                 ctx.HasAnyDirtyAttributes())
@@ -95,16 +98,16 @@ namespace MayaImporter.Phase3.Evaluation
 
                 if (!hit)
                 {
-                    // attribute “I‚É–³ŠÖŒW ¨ Dirty ‰ğœ‚µ‚Ä skip
+                    // attribute ï¿½Iï¿½É–ï¿½ï¿½ÖŒW ï¿½ï¿½ Dirty ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ skip
                     ClearDirty();
                     return;
                 }
             }
 
-            // 3. •]‰¿Às
+            // 3. ï¿½]ï¿½ï¿½ï¿½ï¿½ï¿½s
             Evaluate(ctx);
 
-            // 4. ©•ª‚Ì output attribute ‚Í dirty ˆµ‚¢
+            // 4. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ output attribute ï¿½ï¿½ dirty ï¿½ï¿½ï¿½ï¿½
             if (ctx != null)
                 ctx.MarkAttributeDirty(NodeName);
 
@@ -112,8 +115,72 @@ namespace MayaImporter.Phase3.Evaluation
         }
 
         // -----------------------------
-        // Àˆ—
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         // -----------------------------
         protected abstract void Evaluate(EvalContext ctx);
+    }
+}
+
+
+// ----------------------------------------------------------------------------- 
+// INTEGRATED: WeightEvalNode.cs (moved here; shared eval helper)
+// -----------------------------------------------------------------------------
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+
+namespace MayaImporter.Phase3.Evaluation
+{
+    /// <summary>
+    /// animCurve ï¿½ï¿½ ctx.Time ï¿½ÅƒTï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ float ï¿½lï¿½ï¿½Ô‚ï¿½ï¿½iï¿½{ï¿½ï¿½ï¿½ï¿½ï¿½j
+    /// </summary>
+    public sealed class WeightEvalNode : EvalNode
+    {
+        private readonly float[] _times;
+        private readonly float[] _values;
+
+        private float _value;
+        public float Value => _value;
+
+        public WeightEvalNode(MayaNode animCurveNode)
+            : base(animCurveNode.NodeName)
+        {
+            _times = ExtractFloatArray(animCurveNode, "keyTime");
+            _values = ExtractFloatArray(animCurveNode, "keyValue");
+        }
+
+        protected override void Evaluate(EvalContext ctx)
+        {
+            if (ctx == null || _times == null || _values == null || _times.Length == 0 || _values.Length == 0)
+            {
+                _value = 0f;
+                return;
+            }
+
+            float t = ctx.Time;
+
+            // ï¿½[
+            if (t <= _times[0]) { _value = _values[0]; return; }
+            int last = Mathf.Min(_times.Length, _values.Length) - 1;
+            if (t >= _times[last]) { _value = _values[last]; return; }
+
+            // ï¿½ï¿½Ô’Tï¿½ï¿½ï¿½iï¿½ï¿½ï¿½`ï¿½ï¿½ÔFï¿½Ü‚ï¿½ï¿½Í–{ï¿½ï¿½ï¿½ï¿½ï¿½ÌÅ’áƒ‰ï¿½Cï¿½ï¿½ï¿½j
+            // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Iï¿½Éƒ^ï¿½ï¿½ï¿½Wï¿½Fï¿½ï¿½ï¿½gï¿½ï¿½Ô‚ÖŠgï¿½ï¿½ï¿½Â”\
+            int i = 0;
+            while (i < last && _times[i + 1] < t) i++;
+
+            float t0 = _times[i];
+            float t1 = _times[i + 1];
+            float v0 = _values[i];
+            float v1 = _values[i + 1];
+
+            float u = (t - t0) / Mathf.Max(t1 - t0, 1e-8f);
+            _value = Mathf.Lerp(v0, v1, u);
+        }
+
+        private static float[] ExtractFloatArray(MayaNode node, string key)
+        {
+            if (node.Attributes.TryGetValue(key, out var a) && a.Data?.Value is float[] f)
+                return f;
+            return null;
+        }
     }
 }

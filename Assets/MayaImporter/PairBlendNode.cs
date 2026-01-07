@@ -1,5 +1,5 @@
 // Assets/MayaImporter/PairBlendNode.cs
-// Phase C placeholder -> implemented (structured decode)
+// Production implementation (structured decode)
 // pairBlend: stores decoded inputs/weight + initial evaluated output (best-effort).
 using System;
 using System.Globalization;

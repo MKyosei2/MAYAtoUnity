@@ -1,5 +1,6 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // NodeType: animLayer
-// Phase-1: meaningful decode + "what does this layer affect" capture.
+// Production: meaningful decode + "what does this layer affect" capture.
 //
 // - Decodes: mute/solo/lock/weight + (best-effort) rotation accumulation flags etc.
 // - Captures incoming/outgoing plugs for later clip/layer reconstruction.

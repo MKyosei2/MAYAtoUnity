@@ -1,7 +1,8 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // Assets/MayaImporter/MayaAnimCurveBindingMetadata.cs
-// Phase-1: animCurve ‚ª g‚Ç‚±‚Éh‚³‚Á‚Ä‚¢‚é‚©h ‚ğ Unity ‘¤‚É•Û‚·‚é‚½‚ß‚Ìƒƒ^B
-// MayaAnimationManager ‚Í SceneData.Connections ‚ğ’¼Ú“Ç‚Ş‚Ì‚Å•K{‚Å‚Í‚È‚¢‚ªA
-// uÄ\’z/Clip‰»/ƒfƒoƒbƒOv‚É•K{‹‰‚Ìî•ñB
+// Production: animCurve ãŒ â€œã©ã“ã«åˆºã•ã£ã¦ã„ã‚‹ã‹â€ ã‚’ Unity å´ã«ä¿æŒã™ã‚‹ãŸã‚ã®ãƒ¡ã‚¿ã€‚
+// MayaAnimationManager ã¯ SceneData.Connections ã‚’ç›´æ¥èª­ã‚€ã®ã§å¿…é ˆã§ã¯ãªã„ãŒã€
+// ã€Œå†æ§‹ç¯‰/ClipåŒ–/ãƒ‡ãƒãƒƒã‚°ã€ã«å¿…é ˆç´šã®æƒ…å ±ã€‚
 
 using System.Collections.Generic;
 using UnityEngine;

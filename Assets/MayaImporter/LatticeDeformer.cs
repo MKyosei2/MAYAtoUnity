@@ -6,10 +6,10 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Lattice Deformer
-    /// Phase-1:
-    /// - ApplyToUnity À‘•iSTUB’E‹pj
-    /// - divisions/local/outside ‚ğƒfƒR[ƒh
-    /// - lattice/baseLattice ‚ÌÚ‘±æƒm[ƒh–¼‚ğ best-effort ‚Å•Û
+    /// Production:
+    /// - ApplyToUnity å®Ÿè£…ï¼ˆSTUBè„±å´ï¼‰
+    /// - divisions/local/outside ã‚’ãƒ‡ã‚³ãƒ¼ãƒ‰
+    /// - lattice/baseLattice ã®æ¥ç¶šå…ˆãƒãƒ¼ãƒ‰åã‚’ best-effort ã§ä¿æŒ
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("lattice")]
@@ -37,7 +37,7 @@ namespace MayaImporter.Deformers
 
             envelope = Mathf.Clamp01(DeformerDecodeUtil.ReadFloat(this, envelope, ".envelope", "envelope", ".env", "env"));
 
-            // divisionsiMaya‚Å‚Í s/t/uDivisions ‚Ì‚±‚Æ‚ª‘½‚¢j
+            // divisionsï¼ˆMayaã§ã¯ s/t/uDivisions ã®ã“ã¨ãŒå¤šã„ï¼‰
             divisionU = Mathf.Max(1, DeformerDecodeUtil.ReadInt(this, divisionU, ".divisionU", "divisionU", ".sDivisions", "sDivisions", ".sDiv", "sDiv"));
             divisionV = Mathf.Max(1, DeformerDecodeUtil.ReadInt(this, divisionV, ".divisionV", "divisionV", ".tDivisions", "tDivisions", ".tDiv", "tDiv"));
             divisionW = Mathf.Max(1, DeformerDecodeUtil.ReadInt(this, divisionW, ".divisionW", "divisionW", ".uDivisions", "uDivisions", ".uDiv", "uDiv"));
@@ -46,7 +46,7 @@ namespace MayaImporter.Deformers
             outsideLattice = DeformerDecodeUtil.ReadBool(this, outsideLattice, ".outsideLattice", "outsideLattice", ".outside", "outside");
 
             // lattice/baseLattice (connections best-effort)
-            //  - latticeDeformer ‚Í lattice / baseLattice / ffd ‚È‚Ç‚ÖÚ‘±‚³‚ê‚é‚±‚Æ‚ª‘½‚¢‚Ì‚ÅAdst‘¤‚Ì‘®«–¼‚Å„‘ª
+            //  - latticeDeformer ã¯ lattice / baseLattice / ffd ãªã©ã¸æ¥ç¶šã•ã‚Œã‚‹ã“ã¨ãŒå¤šã„ã®ã§ã€dstå´ã®å±æ€§åã§æ¨æ¸¬
             latticeNode = FindConnectedNodeByDstContains("lattice", "ffd", "latticeInput", "latticeMatrix") ?? latticeNode;
             baseLatticeNode = FindConnectedNodeByDstContains("baseLattice", "base", "baseMatrix") ?? baseLatticeNode;
 

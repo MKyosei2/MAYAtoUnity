@@ -1,4 +1,5 @@
-﻿// Assets/MayaImporter/MayaUnitySceneBuilder.cs
+﻿// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+// Assets/MayaImporter/MayaUnitySceneBuilder.cs
 using System;
 using UnityEngine;
 using MayaImporter.Core;

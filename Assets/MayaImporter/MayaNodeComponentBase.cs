@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Phase-1:
+    /// Production:
     /// Every Maya node must be represented by exactly one Unity component on a GameObject.
     /// Stores lossless-ish node identity + raw attributes + related connections.
     /// </summary>
@@ -54,7 +54,7 @@ namespace MayaImporter.Core
 
         /// <summary>
         /// Called by builder after AddComponent.
-        /// Phase-1 Step-2: inject raw attributes + connections robustly (DAG path, namespace, etc).
+        /// Production Step-2: inject raw attributes + connections robustly (DAG path, namespace, etc).
         /// </summary>
         public virtual void InitializeFromRecord(NodeRecord rec, List<ConnectionRecord> allConnections)
         {
@@ -122,7 +122,7 @@ namespace MayaImporter.Core
         }
 
         /// <summary>
-        /// Phase-1 Step-3:
+        /// Production Step-3:
         /// Node-specific Unity reconstruction hook (Transform/Camera/Light/etc).
         /// Default: no-op.
         /// </summary>

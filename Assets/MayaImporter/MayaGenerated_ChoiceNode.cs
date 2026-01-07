@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // Assets/MayaImporter/MayaGenerated_ChoiceNode.cs
 // NodeType: choice (PhaseC implemented)
 // - Decodes selector + input[] indices

@@ -1,5 +1,6 @@
-﻿// NodeType: deltaMush
-// Phase C implementation: meaningful DecodePhaseC (not generic stub)
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// NodeType: deltaMush
+// Production implementation: meaningful DecodePhaseC (not generic stub)
 
 using System;
 using UnityEngine;

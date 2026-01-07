@@ -5,7 +5,7 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Twist Deformer
-    /// Phase-1 implementation:
+    /// Production implementation:
     /// - Decodes attrs into fields
     /// - Overrides ApplyToUnity => coverage: not STUB
     /// </summary>

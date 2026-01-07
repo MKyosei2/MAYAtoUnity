@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MayaImporter.Deformers
 {
     /// <summary>
-    /// Phase-1: Runtime holder for blendShape weights.
+    /// Production: Runtime holder for blendShape weights.
     /// Applies weights to SkinnedMeshRenderer if blend shapes exist in the mesh.
     /// </summary>
     [DisallowMultipleComponent]

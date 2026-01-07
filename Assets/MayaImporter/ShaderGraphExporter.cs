@@ -1,27 +1,28 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace MayaImporter.Shader
 {
     /// <summary>
-    /// ShaderBuildContext / Material ‚ğ
-    /// Unity ã‚ÅuƒGƒNƒXƒ|[ƒg‰Â”\‚ÈŒ`v‚É‚Ü‚Æ‚ß‚éƒNƒ‰ƒXB
+    /// ShaderBuildContext / Material 
+    /// Unity ÅuGNX|[gÂ”\ÈŒ`vÉ‚Ü‚Æ‚ß‚NXB
     ///
-    /// Œ»’iŠK‚Ì–ğŠ„:
-    /// EShaderGraph ‚ğ’¼Ú¶¬‚µ‚È‚¢
-    /// EMaterial + Maya Shader Network ‚ÌŠ®‘S‚ÈŠÖ˜Aî•ñ‚ğ
-    ///   GameObject / Component ‚Æ‚µ‚Ä•Û
+    /// iKÌ–:
+    /// EShaderGraph ğ’¼ÚÈ‚
+    /// EMaterial + Maya Shader Network ÌŠSÈŠÖ˜A
+    ///   GameObject / Component Æ‚Ä•Û
     ///
-    /// «—ˆ:
-    /// EShaderGraph (.shadergraph) ¶¬
-    /// EJSON / “Æ©ƒtƒH[ƒ}ƒbƒg‘‚«o‚µ
-    /// EURP/HDRP Ø‚è‘Ö‚¦
-    /// ‚·‚×‚Ä‚±‚ÌƒNƒ‰ƒX‚©‚ç”h¶‰Â”\
+    /// :
+    /// EShaderGraph (.shadergraph) 
+    /// EJSON / ÆtH[}bgo
+    /// EURP/HDRP Ø‚Ö‚
+    /// ×‚Ä‚ÌƒNXhÂ”\
     /// </summary>
     public static class ShaderGraphExporter
     {
         /// <summary>
-        /// ShaderBuildContext ‚ğ Unity ƒV[ƒ“ã‚ÉƒGƒNƒXƒ|[ƒgi”z’uj‚·‚é
+        /// ShaderBuildContext  Unity V[ÉƒGNX|[gizuj
         /// </summary>
         public static GameObject ExportToScene(
             ShaderBuildContext context,
@@ -42,7 +43,7 @@ namespace MayaImporter.Shader
             contextHolder.Context = context;
 
             // ===============================
-            // 2. Material ”z’u
+            // 2. Material zu
             // ===============================
             if (materials != null)
             {
@@ -60,7 +61,7 @@ namespace MayaImporter.Shader
             }
 
             // ===============================
-            // 3. ƒm[ƒh‰Â‹‰»iƒfƒoƒbƒO—p“rj
+            // 3. m[hÂifobOprj
             // ===============================
             foreach (var pair in context.AllNodes)
             {
@@ -71,7 +72,7 @@ namespace MayaImporter.Shader
                 var nodeGO = new GameObject($"Node_{node.name}");
                 nodeGO.transform.SetParent(root.transform, false);
 
-                // Šù‘¶ Component ‚ğƒRƒs[‚·‚éŒ`‚Å•Û
+                //  Component Rs[`Å•Û
                 var proxy = nodeGO.AddComponent<ShaderNodeProxy>();
                 proxy.SourceNode = node;
             }
@@ -83,7 +84,7 @@ namespace MayaImporter.Shader
     #region Holder / Proxy Components
 
     /// <summary>
-    /// ShaderBuildContext ‚ğ•Û‚·‚é Component
+    /// ShaderBuildContext Û Component
     /// </summary>
     public sealed class ShaderBuildContextHolder : MonoBehaviour
     {
@@ -91,7 +92,7 @@ namespace MayaImporter.Shader
     }
 
     /// <summary>
-    /// Material QÆ‚ğ•Û‚·‚é Component
+    /// Material QÆ‚Û Component
     /// </summary>
     public sealed class ShaderMaterialReference : MonoBehaviour
     {
@@ -99,8 +100,8 @@ namespace MayaImporter.Shader
     }
 
     /// <summary>
-    /// Œ³‚Ì ShaderNodeComponent ‚ğQÆ‚·‚éƒvƒƒLƒV
-    /// i‰Â‹‰»EƒfƒoƒbƒOEÄƒGƒNƒXƒ|[ƒg—pj
+    ///  ShaderNodeComponent QÆ‚vLV
+    /// iÂEfobOEÄƒGNX|[gpj
     /// </summary>
     public sealed class ShaderNodeProxy : MonoBehaviour
     {

@@ -46,7 +46,7 @@ namespace MayaImporter.Shaders
         }
 
         /// <summary>
-        /// Phase-1 Step-3 reconstruction/evaluation.
+        /// Production Step-3 reconstruction/evaluation.
         /// Computes the distance and publishes a float carrier for downstream nodes.
         /// </summary>
         public override void ApplyToUnity(MayaImportOptions options, MayaImportLog log)

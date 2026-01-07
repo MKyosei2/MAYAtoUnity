@@ -6,10 +6,8 @@ using MayaImporter.Core;
 
 namespace MayaImporter.Dynamics
 {
-    [MayaNodeType("nucleus")]
-    [MayaNodeType("nucleusSolver")]
     [DisallowMultipleComponent]
-    public sealed class NucleusSolver : MayaNodeComponentBase
+    public abstract class NucleusSolverBase : MayaNodeComponentBase
     {
         [Header("Resolved (best-effort)")]
         public Vector3 gravityDirection = Vector3.down;

@@ -1,3 +1,10 @@
+// MAYAIMPORTER_PATCH_V5: fix MayaBinaryReader endian detection for modern .mb headers (FOR4/FOR8) (Unity-only)
+// MayaImporter/MayaBinaryReader.cs
+//
+// Note:
+// The current importer pipeline primarily uses MayaMbIffReader + heuristic extractors.
+// This reader is kept as a low-level utility and should NOT depend on Autodesk/Maya APIs.
+
 using System;
 using System.IO;
 using System.Text;
@@ -5,200 +12,168 @@ using System.Text;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Maya Binary (.mb) 用の低レベル Binary Reader。
-    ///
-    /// ・IFF (Interchange File Format) ベース
-    /// ・FORM / chunk / size 構造対応
-    /// ・Big Endian / Little Endian 自動切替
-    /// ・Maya / Autodesk API 完全不使用
-    ///
-    /// このクラスは「読むだけ」。
-    /// Maya 固有の意味解釈は MayaBinaryChunkParser に委ねる。
+    /// Minimal binary reader with optional big-endian support.
+    /// Maya .mb is an IFF-style container and typically uses big-endian for numeric fields.
+    /// Root tags commonly seen: FOR4 / FOR8 (and occasionally FORM in classic IFF contexts).
     /// </summary>
     public sealed class MayaBinaryReader : IDisposable
     {
         private readonly BinaryReader _reader;
         private bool _bigEndian;
 
-        /// <summary>
-        /// 現在のストリーム位置
-        /// </summary>
         public long Position => _reader.BaseStream.Position;
-
-        /// <summary>
-        /// ストリーム長
-        /// </summary>
         public long Length => _reader.BaseStream.Length;
-
-        /// <summary>
-        /// Big Endian かどうか
-        /// </summary>
         public bool IsBigEndian => _bigEndian;
 
         public MayaBinaryReader(Stream stream)
         {
-            if (stream == null)
-                throw new ArgumentNullException(nameof(stream));
-
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
             _reader = new BinaryReader(stream);
             DetectEndian();
         }
 
-        #region Endian
+        public void Dispose()
+        {
+            _reader?.Dispose();
+        }
 
-        /// <summary>
-        /// Maya Binary のヘッダから Endian を判定
-        /// </summary>
         private void DetectEndian()
         {
-            // Maya Binary は先頭に FORM
-            var pos = _reader.BaseStream.Position;
-            var tag = ReadFourCCInternal(false);
+            // IFF-like containers used by Maya are effectively "big-endian" for size fields.
+            // We still do a plausibility check to avoid false positives when the stream isn't a Maya file.
+            long pos = _reader.BaseStream.Position;
 
-            if (tag != "FORM")
-                throw new InvalidDataException("Not a valid Maya Binary (.mb) file.");
+            string tag = ReadFourCCInternal(bigEndian: false);
+            if (string.IsNullOrEmpty(tag))
+                throw new InvalidDataException("Stream too small for a Maya binary header.");
 
-            // 次の uint32 が chunk size
-            // Big Endian なら巨大な値になるため判定できる
-            var sizeLE = ReadUInt32Internal(false);
-            var sizeBE = SwapUInt32(sizeLE);
+            // Accept common Maya/IFF top-level container tags.
+            bool looksLikeMayaIff =
+                tag == "FOR4" || tag == "FOR8" || tag == "FORM" ||
+                tag == "CAT4" || tag == "CAT8" || tag == "CAT " ||
+                tag == "LIST" || tag == "LIS4" || tag == "LIS8" ||
+                tag == "PROP" || tag == "PRO4" || tag == "PRO8";
 
-            // Maya ファイルサイズと比較して妥当な方を採用
-            var remaining = _reader.BaseStream.Length - _reader.BaseStream.Position;
+            if (!looksLikeMayaIff)
+                throw new InvalidDataException($"Not a valid Maya/IFF container header. tag='{tag}'");
 
-            _bigEndian =
-                sizeBE <= remaining && sizeBE > 0
-                    ? true
-                    : false;
+            // Size is 32-bit big-endian in the common IFF usage.
+            uint sizeBE = ReadUInt32Internal(bigEndian: true);
+            uint sizeLE = SwapUInt32(sizeBE);
 
-            // 巻き戻す
+            long remaining = _reader.BaseStream.Length - _reader.BaseStream.Position;
+
+            // Choose the endian that yields a "sane" payload size.
+            // Maya/IFF is big-endian, so BE should usually win.
+            bool beSane = sizeBE > 0 && sizeBE <= remaining;
+            bool leSane = sizeLE > 0 && sizeLE <= remaining;
+
+            _bigEndian = beSane && !leSane ? true :
+                         leSane && !beSane ? false :
+                         true; // default to big-endian for Maya
+
             _reader.BaseStream.Position = pos;
         }
 
-        #endregion
+        // ---------------- read primitives ----------------
 
-
-        #region Read Primitive
-
-        public string ReadFourCC()
-        {
-            return ReadFourCCInternal(_bigEndian);
-        }
-
-        public uint ReadUInt32()
-        {
-            return ReadUInt32Internal(_bigEndian);
-        }
+        public string ReadFourCC() => ReadFourCCInternal(_bigEndian);
+        public uint ReadUInt32() => ReadUInt32Internal(_bigEndian);
 
         public int ReadInt32()
         {
-            var v = _reader.ReadInt32();
+            int v = _reader.ReadInt32();
             return _bigEndian ? SwapInt32(v) : v;
         }
 
         public float ReadFloat()
         {
             var bytes = _reader.ReadBytes(4);
-            if (_bigEndian)
-                Array.Reverse(bytes);
-
+            if (bytes.Length < 4) throw new EndOfStreamException();
+            if (_bigEndian) Array.Reverse(bytes);
             return BitConverter.ToSingle(bytes, 0);
         }
 
         public double ReadDouble()
         {
             var bytes = _reader.ReadBytes(8);
-            if (_bigEndian)
-                Array.Reverse(bytes);
-
+            if (bytes.Length < 8) throw new EndOfStreamException();
+            if (_bigEndian) Array.Reverse(bytes);
             return BitConverter.ToDouble(bytes, 0);
         }
 
-        public byte ReadByte()
-        {
-            return _reader.ReadByte();
-        }
+        public byte ReadByte() => _reader.ReadByte();
 
-        public byte[] ReadBytes(int count)
-        {
-            return _reader.ReadBytes(count);
-        }
+        public byte[] ReadBytes(int count) => _reader.ReadBytes(count);
 
-        #endregion
-
-
-        #region Read String
+        // ---------------- strings ----------------
 
         /// <summary>
-        /// Maya Binary で使われる length-prefixed string
+        /// Reads a Maya-style length-prefixed UTF-8 string.
+        /// Many Maya binary chunks store strings as: uint32 byteLength, then byteLength bytes (often null-terminated).
         /// </summary>
         public string ReadString()
         {
-            var length = ReadUInt32();
+            uint length = ReadUInt32();
             if (length == 0)
                 return string.Empty;
 
-            var bytes = _reader.ReadBytes((int)length);
+            // Defensive: avoid allocating huge arrays on corrupted files.
+            // Maya chunks shouldn't contain absurd string lengths.
+            if (length > int.MaxValue)
+                throw new InvalidDataException($"String length too large: {length}");
 
-            // null 終端を除去
-            if (bytes.Length > 0 && bytes[^1] == 0)
-                length--;
+            byte[] bytes = _reader.ReadBytes((int)length);
+            if (bytes.Length < (int)length)
+                throw new EndOfStreamException();
 
-            return Encoding.UTF8.GetString(bytes, 0, (int)length);
+            int actualLen = bytes.Length;
+            if (actualLen > 0 && bytes[actualLen - 1] == 0)
+                actualLen -= 1;
+
+            return Encoding.UTF8.GetString(bytes, 0, actualLen);
         }
 
-        #endregion
+        public void Seek(long offset, SeekOrigin origin) => _reader.BaseStream.Seek(offset, origin);
 
+        // ---------------- skip helpers ----------------
 
-        #region Chunk Helpers
-
-        /// <summary>
-        /// チャンクをスキップ（未知チャンク用）
-        /// </summary>
         public void Skip(long size)
         {
-            if (size <= 0)
-                return;
-
+            if (size <= 0) return;
             _reader.BaseStream.Seek(size, SeekOrigin.Current);
         }
 
-        /// <summary>
-        /// チャンク終端までスキップ
-        /// </summary>
         public void SkipTo(long endPosition)
         {
-            if (endPosition <= Position)
-                return;
-
+            if (endPosition <= Position) return;
             _reader.BaseStream.Seek(endPosition - Position, SeekOrigin.Current);
         }
 
-        #endregion
-
-
-        #region Internal Low-Level
+        // ---------------- internal helpers ----------------
 
         private string ReadFourCCInternal(bool bigEndian)
         {
             var bytes = _reader.ReadBytes(4);
-            if (bytes.Length < 4)
-                throw new EndOfStreamException();
+            if (bytes.Length < 4) return null;
 
-            return Encoding.ASCII.GetString(bytes);
+            // FourCC is byte order, not endian; do not reverse.
+            return Encoding.ASCII.GetString(bytes, 0, 4);
         }
 
         private uint ReadUInt32Internal(bool bigEndian)
         {
-            var v = _reader.ReadUInt32();
-            return bigEndian ? SwapUInt32(v) : v;
+            var bytes = _reader.ReadBytes(4);
+            if (bytes.Length < 4) throw new EndOfStreamException();
+            if (bigEndian) Array.Reverse(bytes);
+            return BitConverter.ToUInt32(bytes, 0);
         }
 
         private static uint SwapUInt32(uint v)
         {
             return (v >> 24) |
-                   ((v >> 8) & 0x0000FF00) |
-                   ((v << 8) & 0x00FF0000) |
+                   ((v >> 8) & 0x0000FF00u) |
+                   ((v << 8) & 0x00FF0000u) |
                    (v << 24);
         }
 
@@ -206,20 +181,10 @@ namespace MayaImporter.Core
         {
             unchecked
             {
-                return (int)SwapUInt32((uint)v);
+                uint u = (uint)v;
+                u = SwapUInt32(u);
+                return (int)u;
             }
         }
-
-        #endregion
-
-
-        #region IDisposable
-
-        public void Dispose()
-        {
-            _reader?.Dispose();
-        }
-
-        #endregion
     }
 }

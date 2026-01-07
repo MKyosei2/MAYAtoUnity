@@ -1,4 +1,5 @@
-﻿using System;
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MayaImporter;
@@ -8,7 +9,7 @@ namespace MayaImporter.Generated
 {
     /// <summary>
     /// NodeType: proximityPin
-    /// Phase-1/Phase-C implementation:
+    /// Production/Phase-C implementation:
     /// - Decode common pin parameters best-effort
     /// - Store input geometry / driver references (node names)
     /// </summary>

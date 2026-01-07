@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -77,7 +78,7 @@ namespace MayaImporter.Core
             if (mat.HasProperty("_Color"))
                 mat.SetColor("_Color", col);
 
-            // ÅöÇ±Ç±Ç™ñ{é¿ëïÅFhint Ç©ÇÁ Resources ÇæÇØÇ∂Ç·Ç»Ç≠ ÅgÉfÉBÉXÉNÇ©ÇÁÅh Ç‡ì«Çﬁ
+            // {Fhint  Resources »Ç gfBXNh «Ç
             var tex = TryLoadTextureFromHints(meshOrShapeRec);
             if (tex != null && mat.HasProperty("_MainTex"))
                 mat.SetTexture("_MainTex", tex);
@@ -122,7 +123,7 @@ namespace MayaImporter.Core
                     var key = (i == 1) ? prefix : prefix + i;
                     if (!TryGetHint(rec, key, out var s) || string.IsNullOrEmpty(s)) continue;
 
-                    // 1) Resources (ãåédól)
+                    // 1) Resources (dl)
                     var stem = FileStem(s);
                     if (!string.IsNullOrEmpty(stem))
                     {
@@ -130,7 +131,7 @@ namespace MayaImporter.Core
                         if (texR != null) return texR;
                     }
 
-                    // 2) Disk resolve (êVédólÅFsourceimages ìôÇíTÇ∑)
+                    // 2) Disk resolve (VdlFsourceimages T)
                     var scenePath = MayaBuildContext.CurrentScene?.SourcePath;
                     var abs = MayaTexturePathResolver.Resolve(s, scenePath);
                     if (string.IsNullOrEmpty(abs)) continue;

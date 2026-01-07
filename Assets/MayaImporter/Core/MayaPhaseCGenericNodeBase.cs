@@ -1,5 +1,6 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // Assets/MayaImporter/Core/MayaPhaseCGenericNodeBase.cs
-// Phase-1 "finish the job" base for previously-opaque PhaseC nodes.
+// Production "finish the job" base for previously-opaque PhaseC nodes.
 //
 // Goal:
 // - Remove "3-line opaque decode" stubs across 1000+ nodeTypes.
@@ -16,7 +17,7 @@ namespace MayaImporter.Core
     [DisallowMultipleComponent]
     public abstract class MayaPhaseCGenericNodeBase : MayaPhaseCNodeBase
     {
-        [Header("Phase C - Generic Decode")]
+        [Header("Production - Generic Decode")]
         [SerializeField] private bool hasAttributes;
         [SerializeField] private bool hasConnections;
 

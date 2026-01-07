@@ -1,5 +1,6 @@
-﻿// NodeType: animBlendNodeAdditiveDA
-// Phase-1: meaningful decode + best-effort evaluation (doubleAngle -> scalar degrees)
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// NodeType: animBlendNodeAdditiveDA
+// Production: meaningful decode + best-effort evaluation (doubleAngle -> scalar degrees)
 //
 // Best-effort semantics (degrees):
 //  outputDeg = inputAdeg * weightA + inputBdeg * weightB

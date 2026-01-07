@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // Assets/MayaImporter/MayaAnimValueGraph.cs
 using System;
 using System.Collections.Generic;
@@ -484,20 +485,20 @@ namespace MayaImporter.Animation
             // ----------------------------
             if (nodeType == "choice")
             {
-                // choice ‚Ío—Í–¼‚ªFX‚¾‚ªA”’l—p“r‚È‚çu‚Ç‚Ì attr ‚ğ•·‚©‚ê‚Ä‚à‘I‘ğŒ‹‰Êv‚ğ•Ô‚·•û‚ªÀ—p“I
+                // choice ÍoÍ–FXAlprÈ‚uÇ‚ attr ğ•·‚Ä‚IÊvÔ‚pI
                 float selF = GetInputValue(node, frame, "selector", "sel", "index");
                 int sel = Mathf.Max(0, Mathf.RoundToInt(selF));
 
-                // ‚Ü‚¸‚Í input[sel] ‚ÖÚ‘±‚ª‚ ‚é‚©‚ğŒ©‚éiÅ—Dæj
+                // Ü‚ input[sel] ÖÚ‘é‚©iÅ—Dj
                 string direct = $"{node.NodeName}.input[{sel}]";
                 if (TryGetSingleIncoming(direct, out var srcDirect))
                     return EvaluatePlug(srcDirect, frame);
 
-                // ƒ[ƒJƒ‹’l
+                // [Jl
                 float local = ReadLocalFloat(node, $"input[{sel}]", float.NaN);
                 if (!float.IsNaN(local)) return local;
 
-                // ‚»‚ê‚Å‚à–³‚¢ê‡F‘¶İ‚·‚éƒCƒ“ƒfƒbƒNƒXW‡‚©‚çÅŠñ‚è‚ğ‘I‚Ô
+                // Å‚ê‡Fİ‚CfbNXWÅŠI
                 var idx = CollectArrayIndices(node, "input");
                 if (idx != null && idx.Count > 0)
                 {
@@ -554,8 +555,8 @@ namespace MayaImporter.Animation
             // ----------------------------
             if (nodeType == "pairBlend")
             {
-                // pairBlend ‚Í outTranslate/outRotate ‚ÌŠe²‚ÖÚ‘±‚³‚ê‚éƒP[ƒX‚ª‘½‚¢
-                // ‚±‚±‚Å‚Íu—v‹‚³‚ê‚½ attrPath ‚Ì²‚¾‚¯•Ô‚·vÀ‘•‚É‚·‚é
+                // pairBlend  outTranslate/outRotate ÌŠeÖÚ‘P[X
+                // Å‚Íuvê‚½ attrPath ÌÔ‚vÉ‚
 
                 float w = GetInputValue(node, frame, "weight", "w", "blend");
                 w = Mathf.Clamp01(w);
@@ -634,7 +635,7 @@ namespace MayaImporter.Animation
                     return outR.x;
                 }
 
-                // •s–¾‚È‚ç weight ‚ğ•Ô‚·iˆÀ‘S‚ÈƒfƒoƒbƒO fallbackj
+                // sÈ‚ weight Ô‚iSÈƒfobO fallbackj
                 return w;
             }
 

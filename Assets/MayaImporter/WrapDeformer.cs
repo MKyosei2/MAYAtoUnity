@@ -6,10 +6,10 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Wrap Deformer
-    /// Phase-1:
-    /// - ApplyToUnity À‘•iSTUB’E‹pj
-    /// - wrapŒÅ—Lƒpƒ‰ƒ[ƒ^ + driver/driven/influences ‚ğ best-effort ‚Å•Û
-    /// - Unity‚ÉŠT”O‚ª‚È‚¢‚Ì‚ÅAÄ\’z—pƒRƒ“ƒ|[ƒlƒ“ƒg‚Æ‚µ‚Ä•Û‘¶i«—ˆ‚ÌÀ•]‰¿‚ÉÚ‘±‰Â”\j
+    /// Production:
+    /// - ApplyToUnity å®Ÿè£…ï¼ˆSTUBè„±å´ï¼‰
+    /// - wrapå›ºæœ‰ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ + driver/driven/influences ã‚’ best-effort ã§ä¿æŒ
+    /// - Unityã«æ¦‚å¿µãŒãªã„ã®ã§ã€å†æ§‹ç¯‰ç”¨ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã¨ã—ã¦ä¿å­˜ï¼ˆå°†æ¥ã®å®Ÿè©•ä¾¡ã«æ¥ç¶šå¯èƒ½ï¼‰
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("wrap")]
@@ -45,7 +45,7 @@ namespace MayaImporter.Deformers
             autoWeightThreshold = DeformerDecodeUtil.ReadBool(this, autoWeightThreshold, ".autoWeightThreshold", "autoWeightThreshold", ".awt", "awt");
             bindMethod = DeformerDecodeUtil.ReadInt(this, bindMethod, ".bindMethod", "bindMethod", ".method", "method");
 
-            // MatricesiÚ‘±—Dæj
+            // Matricesï¼ˆæ¥ç¶šå„ªå…ˆï¼‰
             var wmPlug = FindIncomingPlugByDstContains("wrapMatrix", "matrix", "wrap");
             if (!string.IsNullOrEmpty(wmPlug) && DeformerDecodeUtil.TryResolveConnectedMatrix(wmPlug, out var wm))
                 wrapMatrix = wm;
@@ -60,7 +60,7 @@ namespace MayaImporter.Deformers
                      DeformerDecodeUtil.TryReadMatrix4x4(this, ".preMatrix", out bpm) || DeformerDecodeUtil.TryReadMatrix4x4(this, "preMatrix", out bpm))
                 bindPreMatrix = bpm;
 
-            // Driver / Driven / Influences best-effortidst‘®«–¼‚Ì•”•ªˆê’v‚ÅE‚¤j
+            // Driver / Driven / Influences best-effortï¼ˆdstå±æ€§åã®éƒ¨åˆ†ä¸€è‡´ã§æ‹¾ã†ï¼‰
             driverGeometry = FindConnectedNodeByDstContains("driver", "drivers", "driverPoints", "driverGeometry", "driverMesh") ?? driverGeometry;
             drivenGeometry = FindConnectedNodeByDstContains("driven", "drivens", "drivenPoints", "drivenGeometry", "drivenMesh", "input", "inputGeometry", "inMesh") ?? drivenGeometry;
 

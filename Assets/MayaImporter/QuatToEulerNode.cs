@@ -1,5 +1,5 @@
 // Assets/MayaImporter/QuatToEulerNode.cs
-// Phase C placeholder -> implemented (structured decode + best-effort initial evaluation)
+// Production implementation (structured decode + best-effort initial evaluation)
 //
 // quatToEuler:
 //  - reads inputQuat (x,y,z,w) + inputRotateOrder

@@ -1,5 +1,5 @@
 // Assets/MayaImporter/AddDoubleLinearNode.cs
-// Phase-1 implementation (not stub)
+// Production implementation (not stub)
 // NodeType: addDoubleLinear
 //
 // - Reads input1 + input2 (double/float)

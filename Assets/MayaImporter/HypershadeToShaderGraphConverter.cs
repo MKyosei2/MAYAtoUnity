@@ -1,24 +1,25 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace MayaImporter.Shader
 {
     /// <summary>
-    /// Maya Hypershade Network ‚ğ
-    /// Unity —p‚ÌuShader / Material Ä\’z—p ’†ŠÔƒf[ƒ^v‚É•ÏŠ·‚·‚éƒNƒ‰ƒXB
+    /// Maya Hypershade Network 
+    /// Unity pÌuShader / Material Ä\zp Ôƒf[^vÉ•ÏŠNXB
     ///
-    /// –ğŠ„:
-    /// EShaderNetwork ‚ğ‰ğÍ
-    /// EÅI“I‚È Material o—Íƒm[ƒh‚ğ“Á’è
-    /// Eƒm[ƒhÚ‘±ƒOƒ‰ƒt‚ğƒgƒ‰ƒo[ƒX‰Â”\‚È\‘¢‚É•ÏŠ·
+    /// :
+    /// EShaderNetwork 
+    /// EÅII Material oÍƒm[h
+    /// Em[hÚ‘Otgo[XÂ”\È\É•ÏŠ
     ///
-    /// ¦ ShaderGraph / Material ‚ÌÀ¶¬‚Í
-    ///   ShaderGraphBuilder / ShaderGraphExporter ‚ÉˆÏ‚Ë‚é
+    ///  ShaderGraph / Material Ì
+    ///   ShaderGraphBuilder / ShaderGraphExporter ÉˆÏ‚Ë‚
     /// </summary>
     public static class HypershadeToShaderGraphConverter
     {
         /// <summary>
-        /// ShaderNetwork ‚©‚ç ShaderBuildContext ‚ğ¶¬
+        /// ShaderNetwork  ShaderBuildContext ğ¶
         /// </summary>
         public static ShaderBuildContext Convert(ShaderNetwork network)
         {
@@ -28,7 +29,7 @@ namespace MayaImporter.Shader
                 return context;
 
             // ===============================
-            // 1. o—Íƒm[ƒhiMaterialjŒŸo
+            // 1. oÍƒm[hiMaterialjo
             // ===============================
             foreach (var node in network.Nodes.Values)
             {
@@ -38,7 +39,7 @@ namespace MayaImporter.Shader
                 }
             }
 
-            // ƒtƒH[ƒ‹ƒoƒbƒNi‘S•” Unknown ‚Ìê‡‚È‚Çj
+            // tH[obNiS Unknown Ìê‡È‚Çj
             if (context.OutputNodes.Count == 0)
             {
                 foreach (var node in network.Nodes.Values)
@@ -48,7 +49,7 @@ namespace MayaImporter.Shader
             }
 
             // ===============================
-            // 2. ƒOƒ‰ƒt“o˜^
+            // 2. Oto^
             // ===============================
             foreach (var node in network.Nodes.Values)
             {
@@ -68,7 +69,7 @@ namespace MayaImporter.Shader
         #region Utilities
 
         /// <summary>
-        /// Maya “I‚ÉuMaterial o—Ív‚Æ‚İ‚È‚¹‚éƒm[ƒh”»’è
+        /// Maya IÉuMaterial oÍvÆ‚İ‚È‚m[h
         /// </summary>
         private static bool IsMaterialOutputNode(ShaderNodeComponentBase node)
         {
@@ -97,37 +98,37 @@ namespace MayaImporter.Shader
     #region Build Context Data Structures
 
     /// <summary>
-    /// Shader / Material Ä\’z—p‚Ì‘S‘ÌƒRƒ“ƒeƒLƒXƒg
+    /// Shader / Material Ä\zpÌ‘SÌƒReLXg
     /// </summary>
     public sealed class ShaderBuildContext
     {
         /// <summary>
-        /// Material o—Íƒm[ƒhi•¡”‰Âj
+        /// Material oÍƒm[hiÂj
         /// </summary>
         public readonly List<ShaderNodeComponentBase> OutputNodes =
             new List<ShaderNodeComponentBase>();
 
         /// <summary>
-        /// ƒlƒbƒgƒ[ƒN“à‚Ì‘Sƒm[ƒhî•ñ
+        /// lbg[NÌ‘Sm[h
         /// </summary>
         public readonly Dictionary<ShaderNodeComponentBase, ShaderNodeInfo> AllNodes =
             new Dictionary<ShaderNodeComponentBase, ShaderNodeInfo>();
     }
 
     /// <summary>
-    /// 1ƒm[ƒh•ª‚ÌÚ‘±î•ñ
+    /// 1m[hÌÚ‘
     /// </summary>
     public sealed class ShaderNodeInfo
     {
         public ShaderNodeComponentBase Node;
 
         /// <summary>
-        /// InputPort ¨ Ú‘±Œ³ƒm[ƒh
+        /// InputPort  Ú‘m[h
         /// </summary>
         public Dictionary<string, ShaderNodeComponentBase> Inputs;
 
         /// <summary>
-        /// OutputPort ¨ Ú‘±æƒm[ƒhˆê——
+        /// OutputPort  Ú‘m[hê——
         /// </summary>
         public Dictionary<string, List<ShaderNodeComponentBase>> Outputs;
     }

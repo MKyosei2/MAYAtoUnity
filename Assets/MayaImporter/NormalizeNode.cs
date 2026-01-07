@@ -1,4 +1,4 @@
-// Auto-generated placeholder -> Phase C implementation:
+// Auto-generated  Production implementation:
 using System;
 using System.Globalization;
 using UnityEngine;
@@ -68,7 +68,7 @@ namespace MayaImporter.Nodes
                 }
 
                 // If we got all three, stop early
-                // (we canÅft reliably know; just break after one good match)
+                // (we can‚Äôt reliably know; just break after one good match)
                 break;
             }
         }

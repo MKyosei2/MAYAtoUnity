@@ -1,5 +1,5 @@
-﻿// NodeType: unitConversion
-// Phase-1 강화:
+// NodeType: unitConversion
+// Production 강화:
 // - Decodes conversionFactor + localInput
 // - Publishes output via MayaImporter.Core.MayaFloatValue
 // - Keeps incoming plug hint

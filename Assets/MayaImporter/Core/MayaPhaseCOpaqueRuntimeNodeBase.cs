@@ -1,7 +1,8 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // Assets/MayaImporter/Core/MayaPhaseCOpaqueRuntimeNodeBase.cs
 // Final base for "opaque generated" PhaseC nodes.
 //
-// Guarantees for 100ì_èåè:
+// Guarantees for 100_:
 // - Attaches MayaOpaqueNodeRuntime (explicit Unity-side representation for non-Unity concepts)
 // - Attaches MayaOpaqueAttributePreview (inspector visibility)
 // - Attaches MayaOpaqueConnectionPreview (inspector visibility of connectAttr)

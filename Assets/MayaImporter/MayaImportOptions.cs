@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 
 namespace MayaImporter.Core
@@ -95,6 +96,30 @@ namespace MayaImporter.Core
         public bool MbTryExtractEmbeddedAscii = true;
 
         /// <summary>
+        /// Additional .mb recovery path (Unity-only):
+        /// Extracts null-terminated ASCII strings from the binary and tries to reconstruct
+        /// MEL-like statements (createNode/setAttr/connectAttr...).
+        /// This is best-effort and is only used to increase coverage when embedded-ascii scan
+        /// does not yield enough statements.
+        /// </summary>
+        public bool MbTryExtractNullTerminatedAscii = true;
+
+        /// <summary>
+        /// If true, the null-terminated extractor will be allowed even on low confidence.
+        /// </summary>
+        public bool MbAllowLowConfidenceNullTerminatedAscii = true;
+
+        /// <summary>
+        /// If reconstructed statements >= this, we always parse.
+        /// </summary>
+        public int MbNullTerminatedHardMinStatements = 10;
+
+        /// <summary>
+        /// Max reconstructed statements (safety).
+        /// </summary>
+        public int MbNullTerminatedMaxStatements = 200000;
+
+        /// <summary>
         /// If true, even low-confidence extracted ASCII will be parsed.
         /// This can improve coverage, but may introduce noisy/incorrect nodes on rare files.
         /// (RawBinaryBytes are always preserved, so you can audit.)
@@ -125,6 +150,62 @@ namespace MayaImporter.Core
         /// Max extracted chars (safety).
         /// </summary>
         public int MbEmbeddedAsciiMaxChars = 4 * 1024 * 1024;
+
+        
+        // =========================================================
+        // .mb Phase0.5: Deterministic node enumeration (Unity-only, additive)
+        // =========================================================
+
+        /// <summary>
+        /// If true, enumerate nodes deterministically from .mb extracted strings (string table, DAG-like paths),
+        /// and (optionally) command-like text recovered from the binary.
+        /// This improves inspection/audit even when embedded ASCII is unavailable.
+        /// </summary>
+        public bool MbDeterministicEnumerateNodes = true;
+
+        /// <summary>
+        /// Safety: maximum number of nodes created by deterministic enumeration.
+        /// </summary>
+        public int MbDeterministicMaxNodes = 50000;
+
+        /// <summary>
+        /// Safety: maximum number of DAG paths considered.
+        /// </summary>
+        public int MbDeterministicMaxDagPaths = 250000;
+
+        /// <summary>
+        /// When associating name/type hints, search in a small window around the string index.
+        /// </summary>
+        public int MbDeterministicAssociationWindow = 64;
+
+        /// <summary>
+        /// If true, allow single-token names (non-DAG) as deterministic node candidates.
+        /// Kept OFF by default to avoid noise.
+        /// </summary>
+        public bool MbDeterministicAllowSingleNames = false;
+
+        /// <summary>
+        /// Best-effort: tag shading/texture hints from .mb string table for materials stage.
+        /// </summary>
+        public bool MbTryTagShadingFromStrings = true;
+
+        public bool MbTryTagTexturesFromStrings = true;
+
+// =========================================================
+        // .mb Phase1: preservation-first fallback
+        // =========================================================
+
+        /// <summary>
+        /// If .mb parsing cannot enumerate nodes, create placeholder NodeRecords from
+        /// the binary chunk index so the Unity reconstruction has a stable, inspectable
+        /// structure while keeping RawBinaryBytes as the source of truth.
+        /// </summary>
+        public bool MbCreateChunkPlaceholderNodes = true;
+
+        /// <summary>
+        /// Max placeholder nodes generated from chunk index (safety).
+        /// </summary>
+        public int MbChunkPlaceholderMaxNodes = 20000;
     }
 
     public enum CoordinateConversion

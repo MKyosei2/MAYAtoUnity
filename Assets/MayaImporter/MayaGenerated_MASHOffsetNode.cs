@@ -1,6 +1,7 @@
-﻿// AUTO-PATCHED by MayaPhaseCStubPatcher (one-shot)
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// AUTO-PATCHED by MayaPhaseCStubPatcher (one-shot)
 // NodeType: MASH_Offset
-// Phase C implementation: non-empty DecodePhaseC + MayaPhaseCNodeBase (coverage: not STUB)
+// Production implementation: non-empty DecodePhaseC + MayaPhaseCNodeBase (coverage: not STUB)
 
 using UnityEngine;
 using MayaImporter;
@@ -33,7 +34,7 @@ namespace MayaImporter.Generated
             string inInput = string.IsNullOrEmpty(lastIncomingToInput) ? "none" : lastIncomingToInput;
             string inTime  = string.IsNullOrEmpty(lastIncomingToTime)  ? "none" : lastIncomingToTime;
 
-            SetNotes($"{NodeType} '{NodeName}' decoded: enabled={enabled}, attrs={AttributeCount}, conns={ConnectionCount}, incomingInput={inInput}, incomingTime={inTime} (generic PhaseC)");
+            SetNotes($"{NodeType} '{NodeName}' decoded: enabled={enabled}, attrs={AttributeCount}, conns={ConnectionCount}, incomingInput={inInput}, incomingTime={inTime}");
         }
     }
 }

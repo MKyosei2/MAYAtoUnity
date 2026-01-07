@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4_FIXED: compile fixes for provenance + deterministic .mb
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -7,8 +8,8 @@ namespace MayaImporter.Core
 {
     public sealed class MayaSceneData
     {
-        // NOTE: schema bump (.mb embedded-ascii extraction metadata)
-        public const int CurrentSchemaVersion = 6;
+        // NOTE: schema bump (.mb text recovery metadata)
+        public const int CurrentSchemaVersion = 8;
 
         public int SchemaVersion = CurrentSchemaVersion;
 
@@ -41,6 +42,18 @@ namespace MayaImporter.Core
         /// </summary>
         public MayaBinaryIndex MbIndex;
 
+        /// <summary>
+        /// Optional: Deterministic hints extracted from .mb (Unity-only, no Maya/Autodesk API).
+        /// These are additive debug/assist data and never replace the raw source-of-truth bytes.
+        /// </summary>
+        public readonly List<string> MbStringTable = new List<string>(2048);
+
+        /// <summary>
+        /// Optional: Mesh-related chunk hints extracted from .mb (additive).
+        /// </summary>
+        public readonly List<MayaMbMeshHint> MbMeshHints = new List<MayaMbMeshHint>(128);
+
+
         // ============================
         // .mb Embedded ASCII extraction (new)
         // ============================
@@ -59,6 +72,16 @@ namespace MayaImporter.Core
         /// Confidence score (higher means more command-like).
         /// </summary>
         public int MbExtractedAsciiConfidence;
+
+        /// <summary>
+        /// Optional: statement count reconstructed from null-terminated strings.
+        /// </summary>
+        public int MbNullTerminatedStatementCount;
+
+        /// <summary>
+        /// Optional: confidence score for null-terminated reconstruction.
+        /// </summary>
+        public int MbNullTerminatedScore;
 
         // ============================
         // Structured (Category1)
@@ -112,6 +135,32 @@ namespace MayaImporter.Core
             return n;
         }
 
+        /// <summary>
+        /// Best-effort provenance setter (does not downgrade existing provenance).
+        /// Used for audit/proof: tracks whether a node was recovered from ASCII commands,
+        /// embedded .mb ASCII, deterministic string-table enumeration, chunk placeholders, etc.
+        /// </summary>
+        public void MarkProvenance(string nodeName, MayaNodeProvenance provenance, string detail = null)
+        {
+            if (string.IsNullOrEmpty(nodeName)) return;
+            if (provenance == MayaNodeProvenance.Unknown) return;
+
+            NodeRecord n;
+            try { n = GetOrCreateNode(nodeName); }
+            catch { return; }
+            if (n == null) return;
+
+            // Don't downgrade provenance; only upgrade from Unknown, or from deterministic to stronger evidence.
+            if (n.Provenance == MayaNodeProvenance.Unknown ||
+                (n.Provenance == MayaNodeProvenance.MbDeterministicStringTable && provenance != MayaNodeProvenance.MbDeterministicStringTable))
+            {
+                n.Provenance = provenance;
+            }
+
+            if (!string.IsNullOrEmpty(detail) && string.IsNullOrEmpty(n.ProvenanceDetail))
+                n.ProvenanceDetail = detail;
+        }
+
         public void SetRawAscii(string sourcePath, string text)
         {
             SourcePath = sourcePath;
@@ -148,12 +197,39 @@ namespace MayaImporter.Core
         BinaryMb = 2
     }
 
+    /// <summary>
+    /// Provenance of a NodeRecord (Unity-only, no Maya/Autodesk API).
+    /// Used for audit/proof: whether the node was recovered from ASCII commands,
+    /// extracted from .mb evidence, deterministic string table enumeration, or placeholders.
+    /// </summary>
+    public enum MayaNodeProvenance
+    {
+        Unknown = 0,
+        AsciiCommands = 1,
+        MbEmbeddedAscii = 2,
+        MbNullTerminatedAscii = 3,
+        MbDeterministicStringTable = 4,
+        MbChunkPlaceholder = 5,
+        MbHeuristic = 6
+    }
+
+
     public sealed class NodeRecord
     {
         public string Name;
         public string NodeType;
         public string ParentName;
         public string Uuid;
+
+        /// <summary>
+        /// How this node was discovered/recovered in a Unity-only pipeline (for audits).
+        /// </summary>
+        public MayaNodeProvenance Provenance = MayaNodeProvenance.Unknown;
+
+        /// <summary>
+        /// Additional provenance detail (best-effort), e.g. 'createNode', 'stringTable', 'chunkIndex'.
+        /// </summary>
+        public string ProvenanceDetail;
 
         /// <summary>
         /// setAttr values: key is ".attr" (as written in .ma), value stores tokens + parsed typed value (best-effort).

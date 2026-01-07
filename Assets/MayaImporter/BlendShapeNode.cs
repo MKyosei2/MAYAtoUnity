@@ -1,4 +1,5 @@
-﻿using System;
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
@@ -301,6 +302,39 @@ namespace MayaImporter.Deformers
             }
 
             return null;
+        }
+    }
+}
+
+
+// ----------------------------------------------------------------------------- 
+// INTEGRATED: BlendShapeEvalNode.cs
+// -----------------------------------------------------------------------------
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+
+namespace MayaImporter.Phase3.Evaluation
+{
+    /// <summary>
+    /// BlendShape Deformer EvalNode
+    /// ���ό`�� Unity ���s�����߁A�]���� Dirty �`�d�̂�
+    /// </summary>
+    public class BlendShapeEvalNode : EvalNode
+    {
+        private readonly MayaNode _mayaNode;
+
+        public BlendShapeEvalNode(MayaNode node)
+            : base(node.NodeName)
+        {
+            _mayaNode = node;
+        }
+
+        protected override void Evaluate(EvalContext ctx)
+        {
+            if (ctx == null)
+                return;
+
+            // Maya �I�ɂ� outMesh ���X�V�����
+            ctx.MarkAttributeDirty($"{NodeName}.outMesh");
         }
     }
 }

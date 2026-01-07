@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,10 +11,10 @@ namespace MayaImporter.Deformers
     /// <summary>
     /// NodeType: skinCluster
     ///
-    /// 100%•ûj:
-    /// - Unity‚É—‚Æ‚¹‚é”ÍˆÍ‚Í SkinnedMeshRenderer ‚É“K—p
-    /// - Unity§–ñ(1’¸“_4ƒEƒFƒCƒg“™)‚Å—‚¿‚éî•ñ‚Í MayaSkinClusterComponent ‚ÉŠ®‘S•Û
-    /// - “K—pŒ‹‰Ê‚ğƒ^[ƒQƒbƒgMesh‘¤‚Ö MayaSkinApplyResult ‚Æ‚µ‚Äc‚·iŠÄ¸EØ‹’j
+    /// 100%j:
+    /// - UnityÉ—Æ‚ÍˆÍ‚ SkinnedMeshRenderer É“Kp
+    /// - Unity(1_4EFCg)Å— MayaSkinClusterComponent ÉŠSÛ
+    /// - KpÊ‚^[QbgMesh MayaSkinApplyResult Æ‚ÄciÄEØ‹j
     /// </summary>
     [MayaNodeType("skinCluster")]
     [DisallowMultipleComponent]
@@ -24,7 +25,7 @@ namespace MayaImporter.Deformers
             options ??= new MayaImportOptions();
             log ??= new MayaImportLog();
 
-            // Šù‚É•œŒ³Ï‚İ‚È‚çƒXƒLƒbƒv
+            // É•Ï‚İ‚È‚XLbv
             var existing = GetComponent<MayaSkinClusterComponent>();
             if (existing != null && existing.AppliedToUnity)
                 return;
@@ -50,7 +51,7 @@ namespace MayaImporter.Deformers
 
                 log?.Warn("[skinCluster] " + comp.ApplyNote);
 
-                // ŠÄ¸iskinCluster‘¤‚Éc‚·j
+                // ÄiskinClusterÉcj
                 EnsureAuditOnSelf(comp, null, applied: false, note: comp.ApplyNote);
                 return;
             }
@@ -126,7 +127,7 @@ namespace MayaImporter.Deformers
             var smr = target.GetComponent<SkinnedMeshRenderer>();
             if (smr == null || smr.bones == null || smr.bones.Length == 0) return influenceNames.Length;
 
-            // groot fallbackh ‚³‚ê‚Ä‚¢‚éœ‚ğ missing ‚Æ‚İ‚È‚·ibest-effortj
+            // groot fallbackh Ä‚éœ missing Æ‚İ‚È‚ibest-effortj
             var root = target.transform.root;
             int missing = 0;
 
@@ -139,7 +140,7 @@ namespace MayaImporter.Deformers
                 if (string.IsNullOrEmpty(inf)) continue;
                 if (bone == null) { missing++; continue; }
 
-                // Œ©‚Â‚©‚ç‚¸ root ‚É’u‚«Š·‚í‚Á‚½ƒP[ƒX
+                // Â‚ç‚¸ root É’uP[X
                 if (bone == root && !string.Equals(root.name, inf, StringComparison.Ordinal))
                     missing++;
             }
@@ -149,7 +150,7 @@ namespace MayaImporter.Deformers
     }
 
     /// <summary>
-    /// Unity‚É—‚Æ‚µ‚«‚ê‚È‚¢ skinCluster î•ñ‚ğŠ®‘S•Û‚·‚éƒRƒ“ƒ|[ƒlƒ“ƒgB
+    /// UnityÉ—Æ‚È‚ skinCluster SÛR|[lgB
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MayaSkinClusterComponent : MonoBehaviour
@@ -158,7 +159,7 @@ namespace MayaImporter.Deformers
         public string[] InfluenceNames = Array.Empty<string>();
 
         [Header("Weights (Full Fidelity)")]
-        [Tooltip("Sparse list: one entry per (vertex,influence,weight). Unity‚Ì4–{§ŒÀ‚ğ’´‚¦‚Ä‚à‚±‚±‚É•ÛB")]
+        [Tooltip("Sparse list: one entry per (vertex,influence,weight). Unity4{ğ’´‚Ä‚É•ÛB")]
         public MayaSkinWeights.SparseWeight[] FullWeights = Array.Empty<MayaSkinWeights.SparseWeight>();
 
         public int MaxVertexIndex = -1;
@@ -171,5 +172,38 @@ namespace MayaImporter.Deformers
         [Header("Audit (Unity limitation)")]
         public int UnityClampedVertices;
         public int UnityClampedInfluences;
+    }
+}
+
+
+// ----------------------------------------------------------------------------- 
+// INTEGRATED: SkinClusterEvalNode.cs
+// -----------------------------------------------------------------------------
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+
+namespace MayaImporter.Phase3.Evaluation
+{
+    /// <summary>
+    /// SkinCluster Deformer EvalNode
+    /// ï¿½ï¿½ï¿½Xï¿½Lï¿½jï¿½ï¿½ï¿½Oï¿½ï¿½ Unity ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ßADirty ï¿½`ï¿½dï¿½Ì‚İ’Sï¿½ï¿½
+    /// </summary>
+    public class SkinClusterEvalNode : EvalNode
+    {
+        private readonly MayaNode _mayaNode;
+
+        public SkinClusterEvalNode(MayaNode node)
+            : base(node.NodeName)
+        {
+            _mayaNode = node;
+        }
+
+        protected override void Evaluate(EvalContext ctx)
+        {
+            if (ctx == null)
+                return;
+
+            // skinCluster ï¿½ï¿½ outMesh ï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ï¿½
+            ctx.MarkAttributeDirty($"{NodeName}.outMesh");
+        }
     }
 }

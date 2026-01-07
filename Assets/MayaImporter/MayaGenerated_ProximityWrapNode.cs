@@ -1,4 +1,5 @@
-﻿using System;
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MayaImporter;
@@ -8,7 +9,7 @@ namespace MayaImporter.Generated
 {
     /// <summary>
     /// NodeType: proximityWrap
-    /// Phase-1/Phase-C implementation:
+    /// Production/Phase-C implementation:
     /// - Decode common proximityWrap parameters (maxDistance/falloff/etc) best-effort
     /// - Store driver/driven/influences as node names from connections
     /// </summary>

@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,18 +7,18 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Maya Binary (.mb) ‚Ì IFF Chunk ‚ğ‰ğÍ‚µA
-    /// Unity Ä\’z—p‚ÌuˆÓ–¡ƒf[ƒ^v‚ğ’Šo‚·‚éƒNƒ‰ƒXB
+    /// Maya Binary (.mb)  IFF Chunk Í‚A
+    /// Unity Ä\zpÌuÓ–f[^vğ’ŠoNXB
     ///
-    /// MayaBinaryReader = ¶ƒf[ƒ^
-    /// MayaBinaryChunkParser = ˆÓ–¡\‘¢
+    /// MayaBinaryReader = f[^
+    /// MayaBinaryChunkParser = Ó–\
     /// </summary>
     public sealed class MayaBinaryChunkParser
     {
         private readonly MayaBinaryReader _reader;
 
         // ===============================
-        // Œ‹‰Êƒf[ƒ^
+        // Êƒf[^
         // ===============================
         public readonly List<MayaBinaryNode> Nodes = new();
         public readonly List<MayaBinaryConnection> Connections = new();
@@ -28,7 +29,7 @@ namespace MayaImporter.Core
         }
 
         /// <summary>
-        /// ƒp[ƒXŠJniFORM ’¼‰º‚©‚çj
+        /// p[XJniFORM j
         /// </summary>
         public void Parse()
         {
@@ -72,7 +73,7 @@ namespace MayaImporter.Core
                     break;
 
                 default:
-                    // –¢’mƒ`ƒƒƒ“ƒN‚ÍŠ®‘SƒXƒLƒbƒv
+                    // m`NÍŠSXLbv
                     _reader.SkipTo(end);
                     break;
             }
@@ -80,7 +81,7 @@ namespace MayaImporter.Core
 
         private void ParseForm(long end)
         {
-            // FORM ‚Ì’†g‚Í‚³‚ç‚Éƒ`ƒƒƒ“ƒN‚Ì‰ò
+            // FORM Ì’gÍ‚Éƒ`NÌ‰
             while (_reader.Position < end)
             {
                 ParseChunk();
@@ -94,7 +95,7 @@ namespace MayaImporter.Core
 
         private void ParseNode(long end)
         {
-            // Maya node \‘¢iÅ’áŒÀj
+            // Maya node \iÅ’j
             // name (string)
             // type (string)
 
@@ -106,7 +107,7 @@ namespace MayaImporter.Core
 
             Nodes.Add(node);
 
-            // c‚è‚Í–¢’mƒf[ƒ^‚Æ‚µ‚ÄƒXƒLƒbƒv
+            // cÍ–mf[^Æ‚ÄƒXLbv
             _reader.SkipTo(end);
         }
 
@@ -117,7 +118,7 @@ namespace MayaImporter.Core
 
         private void ParseAttribute(long end)
         {
-            // ‘ÎÛƒm[ƒh–¼
+            // ÎÛƒm[h
             var nodeName = _reader.ReadString();
             var attrName = _reader.ReadString();
 
@@ -163,7 +164,7 @@ namespace MayaImporter.Core
                     break;
 
                 default:
-                    // •s–¾Œ^‚Í raw bytes ‚Æ‚µ‚Ä•Û
+                    // s^ raw bytes Æ‚Ä•Û
                     var remaining = (int)(end - _reader.Position);
                     value = _reader.ReadBytes(remaining);
                     break;
@@ -224,7 +225,7 @@ namespace MayaImporter.Core
     #region Data Containers
 
     /// <summary>
-    /// Maya Binary Node î•ñ
+    /// Maya Binary Node 
     /// </summary>
     public sealed class MayaBinaryNode
     {
@@ -236,7 +237,7 @@ namespace MayaImporter.Core
     }
 
     /// <summary>
-    /// Maya Binary Connection î•ñ
+    /// Maya Binary Connection 
     /// </summary>
     public sealed class MayaBinaryConnection
     {

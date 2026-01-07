@@ -1,6 +1,6 @@
-﻿// MayaImporter/VectorProductNode.cs
+// MayaImporter/VectorProductNode.cs
 // NodeType: vectorProduct
-// Phase-1 (real decode + value publish)
+// Production (real decode + value publish)
 //
 // Publishes:
 // - MayaVector3Value : output vector/point (best-effort)

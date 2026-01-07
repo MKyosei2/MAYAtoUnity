@@ -1,15 +1,16 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 namespace MayaImporter.Core.Connections
 {
     /// <summary>
-    /// Maya connectAttr Š®‘S•Û”Å
+    /// Maya connectAttr SÛ
     /// SrcNode.SrcAttr -> DstNode.DstAttr
     ///
-    /// ¦ ‹ŒÀ‘•ŒİŠ·ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ğ•Û
+    ///  İŠRXgN^Û
     /// </summary>
     public class MayaConnection
     {
         // -----------------------------
-        // –{À‘•i³j
+        // {ij
         // -----------------------------
         public string SrcNode;
         public string SrcAttr;
@@ -18,7 +19,7 @@ namespace MayaImporter.Core.Connections
         public string DstAttr;
 
         // -----------------------------
-        // ‹ŒÀ‘•ŒİŠ·ƒvƒƒpƒeƒB
+        // İŠvpeB
         // -----------------------------
 
         public string SrcAttrPath
@@ -42,12 +43,12 @@ namespace MayaImporter.Core.Connections
         }
 
         // -----------------------------
-        // ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+        // RXgN^
         // -----------------------------
 
         public MayaConnection() { }
 
-        // š ‹Œ ConnectAttrParser —pibool ˆø”j
+        //   ConnectAttrParser pibool j
         public MayaConnection(
             string srcNode,
             string srcAttrPath,
@@ -59,7 +60,7 @@ namespace MayaImporter.Core.Connections
             SplitAttrPath(dstAttrPath, out DstNode, out DstAttr);
         }
 
-        // š ‹ŒƒR[ƒh‚ª int ‚ğ“n‚µ‚Ä‚¢‚½ê‡‚Ì•ÛŒ¯
+        //  R[h int nÄ‚ê‡Ì•ÛŒ
         public MayaConnection(
             string srcNode,
             string srcAttrPath,

@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace MayaImporter.Constraints
     /// - Finds target transforms by connections: target -> constraint (targetParentMatrix / tpm / target / tg)
     /// - Creates MayaConstraintDriver on the driven object (Unity-side reconstruction)
     ///
-    /// Phase-1: best-effort, preserves connection topology and basic behavior.
+    /// Production: best-effort, preserves connection topology and basic behavior.
     /// </summary>
     public abstract class MayaConstraintNodeComponent : MayaNodeComponentBase
     {

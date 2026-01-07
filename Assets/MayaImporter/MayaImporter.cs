@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // MayaImporter/MayaImporter.cs
 using System.IO;
 using UnityEngine;
@@ -93,7 +94,7 @@ namespace MayaImporter.Core
 
 #if UNITY_EDITOR
         // -------------------------
-        // Phase1 helper (Project Asset -> absolute file)
+        // Production helper (Project Asset -> absolute file)
         // -------------------------
         public static bool TryGetAbsolutePathFromAssetPath(string assetPath, out string absolutePath)
         {

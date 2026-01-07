@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // MayaImporter/MayaImportedAssetManifest.cs
 using System;
 using System.Collections.Generic;
@@ -6,13 +7,13 @@ using UnityEngine;
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Import結果の “証拠” を保持するManifest。
-    /// - Legacy: .asset として保存される
-    /// - ScriptedImporter: sub-asset として登録される
+    /// Import manifest used as "proof" in portfolios and as an audit trail.
+    /// - Legacy: saved as .asset
+    /// - ScriptedImporter: added as sub-asset
     ///
-    /// 目的:
-    /// - 100%保持の説明材料（ポートフォリオ防衛）
-    /// - Importの再現性・差分検出の土台
+    /// Policy:
+    /// - Unity-only (no Maya/Autodesk API)
+    /// - Preservation-first: record source hash and parsing path
     /// </summary>
     public sealed class MayaImportedAssetManifest : ScriptableObject
     {
@@ -20,10 +21,24 @@ namespace MayaImporter.Core
         public string SourceHint = "";
         public string ImportedAt = "";
         public string UnityVersion = "";
-        public string ToolVersion = "Phase1";
+        public string ToolVersion = "Production";
+
+        [Header("Source Proof")]
+        public string SourceKind = "";
+        public string RawSha256 = "";
+        public int RawByteCount = 0;
+
+        [Header(".mb Proof (best-effort)")]
+        public string MbHeader4CC = "";
+        public int MbChunkCount = 0;
+        public int MbExtractedStringCount = 0;
+        public int MbExtractedAsciiStatements = 0;
+        public int MbExtractedAsciiScore = 0;
+        public bool MbEmbeddedAsciiParsed = false;
+        public bool MbUsedChunkPlaceholders = false;
 
         [Header("Options (snapshot)")]
-        [TextArea(2, 8)]
+        [TextArea(2, 10)]
         public string OptionsSummary = "";
 
         [Header("SceneData snapshot")]
@@ -54,15 +69,40 @@ namespace MayaImporter.Core
             m.ImportedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             m.UnityVersion = Application.unityVersion;
 
-            // options snapshot (keep robust even if fields change)
-            try
+            // Source proof
+            m.SourceKind = scene != null ? scene.SourceKind.ToString() : "Unknown";
+            m.RawSha256 = scene?.RawSha256 ?? "";
+            m.RawByteCount = scene?.RawBinaryBytes != null ? scene.RawBinaryBytes.Length : 0;
+
+            if (scene != null && scene.SourceKind == MayaSourceKind.BinaryMb)
             {
-                m.OptionsSummary = BuildOptionsSummary(options);
+                m.MbHeader4CC = scene.MbIndex?.Header4CC ?? "";
+                m.MbChunkCount = scene.MbIndex?.Chunks?.Count ?? 0;
+                m.MbExtractedStringCount = scene.MbIndex?.ExtractedStrings?.Count ?? 0;
+                m.MbExtractedAsciiStatements = scene.MbExtractedAsciiStatementCount;
+                m.MbExtractedAsciiScore = scene.MbExtractedAsciiConfidence;
+
+                // detect actual parse path
+                bool embeddedUsed = false;
+                bool chunkPlaceholderUsed = false;
+                var rs = scene.RawStatements;
+                if (rs != null)
+                {
+                    for (int i = 0; i < rs.Count; i++)
+                    {
+                        var s = rs[i];
+                        if (s == null) continue;
+                        if (string.Equals(s.Command, "mbEmbeddedAscii", StringComparison.Ordinal)) embeddedUsed = true;
+                        if (string.Equals(s.Command, "mbChunkPlaceholder", StringComparison.Ordinal)) chunkPlaceholderUsed = true;
+                    }
+                }
+                m.MbEmbeddedAsciiParsed = embeddedUsed;
+                m.MbUsedChunkPlaceholders = chunkPlaceholderUsed;
             }
-            catch
-            {
-                m.OptionsSummary = "(options snapshot unavailable)";
-            }
+
+            // Options snapshot
+            try { m.OptionsSummary = BuildOptionsSummary(options); }
+            catch { m.OptionsSummary = "(options snapshot unavailable)"; }
 
             m.SceneNodeCount = scene?.Nodes?.Count ?? 0;
             m.SceneConnectionCount = scene?.Connections?.Count ?? 0;
@@ -78,20 +118,20 @@ namespace MayaImporter.Core
                 });
             }
 
-            // Legacy asset paths
+            // Legacy asset paths / Importer sub-asset ids
             if (report != null)
             {
-                foreach (var p in report.MeshAssets)
-                    m.Generated.Add(new GeneratedItem { Kind = "Mesh", Name = SafeNameFromId(p), Identifier = p });
+                foreach (var id in report.MeshAssets)
+                    m.Generated.Add(new GeneratedItem { Kind = "Mesh", Name = SafeNameFromId(id), Identifier = id });
 
-                foreach (var p in report.MaterialAssets)
-                    m.Generated.Add(new GeneratedItem { Kind = "Material", Name = SafeNameFromId(p), Identifier = p });
+                foreach (var id in report.MaterialAssets)
+                    m.Generated.Add(new GeneratedItem { Kind = "Material", Name = SafeNameFromId(id), Identifier = id });
 
-                foreach (var p in report.TextureAssets)
-                    m.Generated.Add(new GeneratedItem { Kind = "Texture", Name = SafeNameFromId(p), Identifier = p });
+                foreach (var id in report.TextureAssets)
+                    m.Generated.Add(new GeneratedItem { Kind = "Texture", Name = SafeNameFromId(id), Identifier = id });
 
-                foreach (var p in report.AnimationClipAssets)
-                    m.Generated.Add(new GeneratedItem { Kind = "AnimationClip", Name = SafeNameFromId(p), Identifier = p });
+                foreach (var id in report.AnimationClipAssets)
+                    m.Generated.Add(new GeneratedItem { Kind = "AnimationClip", Name = SafeNameFromId(id), Identifier = id });
 
                 if (!string.IsNullOrEmpty(report.PrefabAssetPath))
                     m.Generated.Add(new GeneratedItem { Kind = "Prefab", Name = SafeNameFromId(report.PrefabAssetPath), Identifier = report.PrefabAssetPath });
@@ -99,7 +139,6 @@ namespace MayaImporter.Core
                 if (!string.IsNullOrEmpty(report.ManifestAssetPath))
                     m.Generated.Add(new GeneratedItem { Kind = "Manifest", Name = SafeNameFromId(report.ManifestAssetPath), Identifier = report.ManifestAssetPath });
 
-                // Importer sub-asset ids
                 foreach (var id in report.MeshSubAssetIds)
                     m.Generated.Add(new GeneratedItem { Kind = "Mesh", Name = id, Identifier = id });
 
@@ -121,8 +160,6 @@ namespace MayaImporter.Core
         {
             if (options == null) return "(null options)";
 
-            // 手堅く、存在しそうな値だけを列挙（コンパイル時にフィールドが消える可能性を避けたいので reflection は使わない）
-            // ※ あなたの現在のMayaImportOptionsに合わせたキー
             return string.Join("\n", new[]
             {
                 $"KeepRawStatements: {options.KeepRawStatements}",
@@ -144,6 +181,10 @@ namespace MayaImporter.Core
                 $"AttachDecodedAttributeSummary: {options.AttachDecodedAttributeSummary}",
                 $"OpaquePreviewMaxEntries: {options.OpaquePreviewMaxEntries}",
                 $"OpaqueRuntimeGizmoSize: {options.OpaqueRuntimeGizmoSize}",
+                $"MbTryExtractEmbeddedAscii: {options.MbTryExtractEmbeddedAscii}",
+                $"MbAllowLowConfidenceEmbeddedAscii: {options.MbAllowLowConfidenceEmbeddedAscii}",
+                $"MbCreateChunkPlaceholderNodes: {options.MbCreateChunkPlaceholderNodes}",
+                $"MbChunkPlaceholderMaxNodes: {options.MbChunkPlaceholderMaxNodes}",
             });
         }
 
@@ -152,8 +193,7 @@ namespace MayaImporter.Core
             if (string.IsNullOrEmpty(id)) return "";
             id = id.Replace('\\', '/');
             var lastSlash = id.LastIndexOf('/');
-            var name = (lastSlash >= 0) ? id.Substring(lastSlash + 1) : id;
-            return name;
+            return (lastSlash >= 0) ? id.Substring(lastSlash + 1) : id;
         }
     }
 }

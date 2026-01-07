@@ -8,11 +8,11 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Wire Deformer
-    /// Phase-1 implementation:
-    /// - ApplyToUnity À‘•iSTUB’E‹pj
-    /// - ”z—ñ‘®«(dropoffDistance/scale/rotation)‚ğ index •t‚«‚ÅûW
-    /// - driven geometry / deform wire curves / base wire curves ‚ğ connections ‚©‚ç„‘ª‚µ‚Ä•Û
-    /// - Unity‚ÉŠT”O‚ª‚È‚¢‚½‚ßAÄ\’z—pƒRƒ“ƒ|[ƒlƒ“ƒg‚Æ‚µ‚Äƒpƒ‰ƒ[ƒ^EÚ‘±‚ğ•Û‘¶
+    /// Production implementation:
+    /// - ApplyToUnity å®Ÿè£…ï¼ˆSTUBè„±å´ï¼‰
+    /// - é…åˆ—å±æ€§(dropoffDistance/scale/rotation)ã‚’ index ä»˜ãã§åé›†
+    /// - driven geometry / deform wire curves / base wire curves ã‚’ connections ã‹ã‚‰æ¨æ¸¬ã—ã¦ä¿æŒ
+    /// - Unityã«æ¦‚å¿µãŒãªã„ãŸã‚ã€å†æ§‹ç¯‰ç”¨ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã¨ã—ã¦ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ»æ¥ç¶šã‚’ä¿å­˜
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("wire")]
@@ -91,7 +91,7 @@ namespace MayaImporter.Deformers
             bindPreMatrix = bindPreMtx;
         }
 
-        // ===== Phase-1 Decode =====
+        // ===== Production Decode =====
 
         public override void ApplyToUnity(MayaImportOptions options, MayaImportLog log)
         {

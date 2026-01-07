@@ -1,11 +1,12 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Text;
 
 namespace MayaImporter.Utils
 {
     /// <summary>
-    /// .mbiƒoƒCƒiƒŠj‰ğÍ‚Ì‚½‚ß‚Ì gAPI‚È‚µh ReaderB
-    /// Core(.mb) À‘•‚ÍŒã‰ñ‚µ•ûj‚¾‚ªA‚±‚±‚Íæ‚É100“_i“Ç‚ß‚é“¹‹ïj‚É‚µ‚Ä‚¨‚­B
+    /// .mbioCijÍ‚Ì‚ß‚ gAPIÈ‚h ReaderB
+    /// Core(.mb) ÍŒñ‚µ•jAÍ100_iÇ‚ß‚é“¹jÉ‚Ä‚B
     /// </summary>
     public sealed class BinaryDataReader
     {
@@ -118,7 +119,7 @@ namespace MayaImporter.Utils
         }
 
         /// <summary>
-        /// 7bit ‰Â•Ï’·iBinaryReader ŒİŠ·j
+        /// 7bit Â•Ï’iBinaryReader İŠj
         /// </summary>
         public int Read7BitEncodedInt()
         {
@@ -145,7 +146,7 @@ namespace MayaImporter.Utils
 
         public string ReadCString()
         {
-            // '\0' ‚Ü‚Å
+            // '\0' Ü‚
             int start = _pos;
             while (_pos < Length && _data[_pos] != 0) _pos++;
             int len = _pos - start;

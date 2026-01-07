@@ -5,9 +5,9 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya SoftMod Deformer
-    /// Phase-1:
-    /// - ApplyToUnity À‘•iSTUB’E‹pj
-    /// - Unity‚ÉŠT”O‚ª‚È‚¢‚½‚ßAÄ\’z—pƒRƒ“ƒ|[ƒlƒ“ƒg‚Æ‚µ‚Äƒpƒ‰ƒ[ƒ^/Ú‘±‚ğ•Û
+    /// Production:
+    /// - ApplyToUnity å®Ÿè£…ï¼ˆSTUBè„±å´ï¼‰
+    /// - Unityã«æ¦‚å¿µãŒãªã„ãŸã‚ã€å†æ§‹ç¯‰ç”¨ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã¨ã—ã¦ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿/æ¥ç¶šã‚’ä¿æŒ
     /// </summary>
     [DisallowMultipleComponent]
     [MayaNodeType("softMod")]
@@ -45,10 +45,10 @@ namespace MayaImporter.Deformers
                 yKeys: new[] { ".originY", "originY", ".oy", "oy" },
                 zKeys: new[] { ".originZ", "originZ", ".oz", "oz" });
 
-            // falloffCurve nodeiÚ‘±best-effortj
+            // falloffCurve nodeï¼ˆæ¥ç¶šbest-effortï¼‰
             falloffCurveNode = FindConnectedNodeByDstContains("falloffCurve", "curve", "ramp") ?? falloffCurveNode;
 
-            // MatricesiÚ‘±—Dæj
+            // Matricesï¼ˆæ¥ç¶šå„ªå…ˆï¼‰
             var smPlug = FindIncomingPlugByDstContains("softModMatrix", "matrix", "softMod");
             if (!string.IsNullOrEmpty(smPlug) && DeformerDecodeUtil.TryResolveConnectedMatrix(smPlug, out var sm))
                 softModMatrix = sm;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;

@@ -5,7 +5,7 @@ namespace MayaImporter.Deformers
 {
     /// <summary>
     /// Maya Flare Deformer
-    /// Phase-1 implementation:
+    /// Production implementation:
     /// - Decodes attrs into fields
     /// - Overrides ApplyToUnity => coverage: not STUB
     /// </summary>

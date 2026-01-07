@@ -56,11 +56,11 @@ namespace MayaImporter.Deformers
             inbetweenWeight = inbetweenPos;
         }
 
-        // ===== Phase-1 Step-3 =====
+        // ===== Production Step-3 =====
 
         public override void ApplyToUnity(MayaImportOptions options, MayaImportLog log)
         {
-            // This nodefs main job in Phase-1 is:
+            // This nodeâ€™s main job in Production is:
             // 1) exist as "1 Maya node => 1 Unity component"
             // 2) keep raw attrs/connections losslessly (handled by base)
             // 3) provide best-effort convenience fields for downstream systems

@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,20 +8,20 @@ using MayaImporter.Geometry;
 namespace MayaImporter.Deformers
 {
     /// <summary>
-    /// SkinCluster ‚ğ Unity ‚Ì SkinnedMeshRenderer ‚Ö“K—p‚·‚éB
+    /// SkinCluster  Unity  SkinnedMeshRenderer Ö“KpB
     ///
-    /// ’ˆÓ:
-    /// - Unity‚Í1’¸“_4ƒEƒFƒCƒg(BoneWeight)‚ªŠî–{B
-    /// - ‚»‚ê‚ğ’´‚¦‚éƒEƒFƒCƒg‚Íu¸‚í‚¸vMayaSkinClusterComponent.FullWeights ‚É•Û‚µ‘±‚¯‚éB
-    /// - Unity‘¤‚ÍãˆÊ4–{‚Ì‹ß—‚Æ‚µ‚Ä“K—p‚·‚éi‰Â‹‰»EÄ¶–Ú“IjB
+    /// :
+    /// - Unity1_4EFCg(BoneWeight){B
+    /// - ğ’´‚EFCgÍuí‚¸vMayaSkinClusterComponent.FullWeights É•ÛB
+    /// - UnityÍ4{Ì‹ßÆ‚Ä“KpiÂEÄÚ“IjB
     /// </summary>
     public static class MayaSkinReconstruction
     {
         /// <summary>
-        /// skinCluster ‚ª‰e‹¿‚·‚é target mesh ‚ğ’T‚·iƒxƒXƒgƒGƒtƒH[ƒgjB
-        /// Šî–{í—ª:
-        /// - Connections ‚Å mesh ‚Á‚Û‚¢ƒm[ƒh‚É’H‚é
-        /// - ‚»‚ê‚ª–³—‚È‚çA“¯ŠK‘w/“¯ƒ‹[ƒg‚Ì MayaMeshNodeComponent ‚ğ’T‚·
+        /// skinCluster e target mesh TixXgGtH[gjB
+        /// {í—ª:
+        /// - Connections  mesh Û‚m[hÉ’H
+        /// - ê‚ªÈ‚AKw/[g MayaMeshNodeComponent T
         /// </summary>
         public static GameObject FindTargetMeshForSkinCluster(MayaNodeComponentBase skinCluster)
         {
@@ -36,7 +37,7 @@ namespace MayaImporter.Deformers
                     var dst = c.DstPlug ?? "";
                     var src = c.SrcPlug ?? "";
 
-                    // outputGeometry / outputGeometry[0] ‚Æ‚©‚ª mesh ‚ÉŒü‚­‚±‚Æ‚ª‘½‚¢
+                    // outputGeometry / outputGeometry[0] Æ‚ mesh ÉŒÆ‚
                     bool looksGeom = src.IndexOf("outputGeometry", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                      dst.IndexOf("input", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                      dst.IndexOf("inMesh", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -83,7 +84,7 @@ namespace MayaImporter.Deformers
         }
 
         /// <summary>
-        /// MayaSkinClusterComponent ‚ğ SkinnedMeshRenderer ‚É“K—p‚·‚éB
+        /// MayaSkinClusterComponent  SkinnedMeshRenderer É“KpB
         /// </summary>
         public static bool TryApplySkinClusterToTarget(
             MayaSkinClusterComponent skin,

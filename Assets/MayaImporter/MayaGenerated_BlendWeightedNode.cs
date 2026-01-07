@@ -1,5 +1,6 @@
-﻿// NodeType: blendWeighted
-// Phase-1 implementation: meaningful decode + best-effort evaluation
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// NodeType: blendWeighted
+// Production implementation: meaningful decode + best-effort evaluation
 // - Decodes input[i] and weight[i] (holes & ranges supported)
 // - output = Σ (input[i] * weight[i])
 // - Publishes output via MayaImporter.Core.MayaFloatValue (maya/unity same)

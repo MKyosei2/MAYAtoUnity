@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using MayaImporter.Components;
@@ -8,9 +9,9 @@ namespace MayaImporter.Shading
 {
     /// <summary>
     /// Maya shadingEngine node.
-    /// - surfaceShader を解決
-    /// - sets -e -forceElement の RawStatements から members を復元（.ma）
-    /// - connection instObjGroups -> dagSetMembers からも members を補完（.ma/.mb best-effort）
+    /// - surfaceShader 
+    /// - sets -e -forceElement  RawStatements  members 恁i.maj
+    /// - connection instObjGroups -> dagSetMembers  members 竓ｮi.ma/.mb best-effortj
     /// </summary>
     [MayaNodeType("shadingEngine")]
     [DisallowMultipleComponent]

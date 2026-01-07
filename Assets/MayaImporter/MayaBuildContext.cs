@@ -1,10 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// Phase-1 Step-3:
+    /// Production Step-3:
     /// Provide scene-wide context during ApplyToUnity() without rewriting every signature.
     /// </summary>
     public static class MayaBuildContext

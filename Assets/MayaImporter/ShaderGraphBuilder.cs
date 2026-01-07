@@ -1,13 +1,14 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace MayaImporter.Shader
 {
     /// <summary>
-    /// ShaderBuildContext ‚©‚ç Unity Material ‚ğÄ\’z‚·‚éƒrƒ‹ƒ_[B
+    /// ShaderBuildContext  Unity Material Ä\zr_[B
     ///
-    /// ¦ ƒNƒ‰ƒX–¼‚É ShaderGraph ‚Æ‚ ‚é‚ªA
-    ///   ‚±‚Ì’iŠK‚Å‚Í ShaderGraph ƒAƒZƒbƒg‚ğ¶¬‚µ‚È‚¢B
+    ///  NX ShaderGraph Æ‚é‚ªA
+    ///   Ì’iKÅ‚ ShaderGraph AZbgğ¶È‚B
     /// </summary>
     public static class ShaderGraphBuilder
     {
@@ -138,7 +139,7 @@ namespace MayaImporter.Shader
     }
 
     /// <summary>
-    /// ¶¬‚³‚ê‚½ Material ‚Æ Maya Shader ƒlƒbƒgƒ[ƒN‚ğ•R‚Ã‚¯‚é•Û—p Component
+    /// ê‚½ Material  Maya Shader lbg[NRÃ‚Ûp Component
     /// </summary>
     public sealed class ShaderMaterialHolder : MonoBehaviour
     {

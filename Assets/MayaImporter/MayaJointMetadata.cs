@@ -3,10 +3,11 @@ using UnityEngine;
 namespace MayaImporter.Components
 {
     /// <summary>
-    /// Unity‚É‘¶İ‚µ‚È‚¢ Maya joint ŒÅ—Lî•ñ‚ğ•Û‚·‚éi100“_ğŒFÌ‚Ä‚È‚¢j
+    /// Unityã«å­˜åœ¨ã—ãªã„ Maya joint å›ºæœ‰æƒ…å ±ã‚’ä¿æŒã™ã‚‹ï¼ˆ100ç‚¹æ¡ä»¶ï¼šæ¨ã¦ãªã„ï¼‰
     /// </summary>
     public sealed class MayaJointMetadata : MonoBehaviour
     {
+        public Vector3 jointOrientMayaDegrees;
         public Vector3 jointOrientDegrees;
         public int rotateOrder;
         public bool segmentScaleCompensate;

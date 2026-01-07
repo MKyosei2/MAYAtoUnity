@@ -1,9 +1,11 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 // MayaImporter/MayaMaMbImporterOverride.cs
 #if UNITY_EDITOR
 using System;
 using System.IO;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using MayaImporter.Animation;
 
 namespace MayaImporter.Core
 {
@@ -17,13 +19,32 @@ namespace MayaImporter.Core
         [Header("Import Options (per-asset)")]
         [SerializeField] private MayaImportOptions _options = new MayaImportOptions();
 
+        [Header("Reconstruction Selection (per-asset)")]
+        [SerializeField] private bool _useReconstructionSelection = false;
+        [SerializeField] private MayaReconstructionSelection _reconstruction = new MayaReconstructionSelection();
+
         [Header("Debug / Audit")]
         [SerializeField] private bool _addImportLogTextAsset = true;
 
-        [Tooltip("ImportLog TextAsset �̍ő啶�����i���働�O��Inspector���d���Ȃ�̂�h���j")]
+        [Tooltip("ON: ImportLog の warnings/errors を Unity Console にも出す (既定はOFFでコンソールを綺麗にする)")]
+        [SerializeField] private bool _emitLogWarningsToConsole = false;
+
+        [Tooltip("ON: ImportLog の errors を Unity Console にも出す (既定はOFFでコンソールを綺麗にする)")]
+        [SerializeField] private bool _emitLogErrorsToConsole = false;
+
+        [Tooltip("ON: 例外発生時に Debug.LogException を出す (既定はOFF: Console を綺麗にする)")]
+        [SerializeField] private bool _emitExceptionToConsole = false;
+
+        [Tooltip("ImportLog TextAsset が巨大でInspectorが重くなるのを防ぐ")]
         [SerializeField] private int _importLogMaxChars = 200_000;
 
         [SerializeField] private bool _addCoverageReportTextAsset = true;
+
+        [Header("Phase 6: Verification / Determinism")]
+        [SerializeField] private bool _addPhase6VerificationReportTextAsset = true;
+
+        [Tooltip("VerificationReport TextAsset が巨大になるのを防ぐ")]
+        [SerializeField] private int _phase6ReportMaxChars = 200_000;
 
         public override void OnImportAsset(AssetImportContext ctx)
         {
@@ -44,10 +65,33 @@ namespace MayaImporter.Core
 
                 var opt = CloneOptions(_options);
 
-                // �� �|�[�g�t�H���I100�_�񂹁FAnimationClip �� sub-asset ���������̂� importer �o�R�ŕK��ON
-                opt.SaveAnimationClip = true;
+                // 100%保持の根幹：Raw statements は常に保持
+                opt.KeepRawStatements = true;
 
-                var root = MayaImporter.ImportIntoScene(abs, opt, out scene, out log);
+                // 選別（再構築/保存の制御）
+                MayaReconstructionSelection sel = null;
+                if (_useReconstructionSelection && _reconstruction != null && _reconstruction.Enabled)
+                    sel = _reconstruction;
+
+                if (sel != null)
+                {
+                    opt.SaveMeshes = sel.ImportMeshes;
+                    opt.SaveMaterials = sel.ImportMaterials;
+                    opt.SaveTextures = sel.ImportTextures;
+                    opt.SaveAnimationClip = sel.ImportAnimationClip;
+                }
+                else
+                {
+                    // 既定はポートフォリオ向けにClip ON（プレビューでOFFにできる）
+                    opt.SaveAnimationClip = true;
+                }
+
+                GameObject root;
+                using (MayaReconstructionSelectionContext.Push(sel))
+                {
+                    root = MayaImporter.ImportIntoScene(abs, opt, out scene, out log);
+                }
+
                 if (root == null)
                 {
                     root = new GameObject(Path.GetFileNameWithoutExtension(ctx.assetPath));
@@ -55,15 +99,39 @@ namespace MayaImporter.Core
                 }
 
                 // --- Phase B: Materials/Textures apply ---
-                MayaMaterialAutoApply.Run_BestEffort(root.transform, scene, opt, log);
+                if (opt.SaveMaterials || opt.SaveTextures)
+                    MayaMaterialAutoApply.Run_BestEffort(root.transform, scene, opt, log);
+                else
+                    (log ??= new MayaImportLog()).Info("Phase B material auto-apply skipped (materials/textures disabled).");
+
+                // --- Phase 4: .mb mesh finalize (ensure renderer/materials even when shading is unknown) ---
+                MayaPhase4AutoFinalizeMbMeshesOnImport.Run_BestEffort(root.transform, scene, opt, log);
+
+                // --- Phase 5: Post-sample solvers hook (Expressions -> Constraints -> IK) ---
+                // This does not require Maya/Autodesk API. It only wires Unity-side evaluation.
+                MayaRuntimePostSampleSolvers.EnsureOnRoot(root);
 
                 // --- Phase C: Auto Bake Animation + Audit ---
-                MayaPhaseCAutoBakeOnImport.Run_BestEffort(root, scene, opt, log);
+                if (opt.SaveAnimationClip)
+                    MayaPhaseCAutoBakeOnImport.Run_BestEffort(root, scene, opt, log);
+                else
+                    (log ??= new MayaImportLog()).Info("Phase C auto-bake skipped (SaveAnimationClip disabled).");
 
-                // --- Phase D: Unknown upgrade + Coverage proof (����) ---
+                // --- Phase D: Unknown upgrade + Coverage proof ---
                 var coverageReport = MayaPhaseDAutoCoverageOnImport.Run_BestEffort(root, scene, opt, log);
 
-                // ScriptedImporter������Asset���iPrefab(main) + sub-assets�j
+                // --- Phase 6: Verification + Determinism fingerprint (portfolio-grade proof) ---
+                string phase6Report = null;
+                try
+                {
+                    phase6Report = MayaPhase6Verification.BuildAndAttach(root, scene, opt, sel, log);
+                }
+                catch (Exception e)
+                {
+                    (log ??= new MayaImportLog()).Warn($"[Phase6] Verification failed: {e.GetType().Name}: {e.Message}");
+                }
+
+                // ScriptedImporter向けのAsset化（Prefab main + sub-assets）
                 MayaAssetPipeline.AssetizeForImporter(ctx, root, scene, opt, log);
 
                 if (_addImportLogTextAsset)
@@ -82,13 +150,29 @@ namespace MayaImporter.Core
                     ctx.AddObjectToAsset("coverageReport", ta);
                 }
 
+                if (_addPhase6VerificationReportTextAsset && !string.IsNullOrEmpty(phase6Report))
+                {
+                    var txt = phase6Report;
+                    if (_phase6ReportMaxChars > 0 && txt.Length > _phase6ReportMaxChars)
+                        txt = txt.Substring(0, _phase6ReportMaxChars) + "\n...(truncated)...";
+
+                    var ta = new TextAsset(txt) { name = "MayaPhase6VerificationReport" };
+                    ctx.AddObjectToAsset("phase6Report", ta);
+                }
+
                 if (log != null)
                 {
-                    for (int i = 0; i < log.Warnings.Count; i++)
-                        ctx.LogImportWarning("[MayaImporter] " + log.Warnings[i]);
+                    if (_emitLogWarningsToConsole)
+                    {
+                        for (int i = 0; i < log.Warnings.Count; i++)
+                            ctx.LogImportWarning("[MayaImporter] " + log.Warnings[i]);
+                    }
 
-                    for (int i = 0; i < log.Errors.Count; i++)
-                        ctx.LogImportError("[MayaImporter] " + log.Errors[i]);
+                    if (_emitLogErrorsToConsole)
+                    {
+                        for (int i = 0; i < log.Errors.Count; i++)
+                            ctx.LogImportError("[MayaImporter] " + log.Errors[i]);
+                    }
                 }
             }
             catch (Exception ex)
@@ -98,7 +182,14 @@ namespace MayaImporter.Core
                 ctx.SetMainObject(fallback);
 
                 ctx.LogImportError("[MayaImporter] Exception during import. See console for stack trace.");
-                Debug.LogException(ex);
+                try
+                {
+                    (log ??= new MayaImportLog()).Error(ex.ToString());
+                }
+                catch { }
+
+                if (_emitExceptionToConsole)
+                    Debug.LogException(ex);
             }
         }
 

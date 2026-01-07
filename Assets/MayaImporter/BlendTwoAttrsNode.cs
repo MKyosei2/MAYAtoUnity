@@ -1,5 +1,5 @@
 // Assets/MayaImporter/BlendTwoAttrsNode.cs
-// Phase C placeholder -> implemented (structured decode + best-effort initial evaluation)
+// Production implementation (structured decode + best-effort initial evaluation)
 //
 // blendTwoAttrs (variant):
 //  - reads input0/input1 and blender

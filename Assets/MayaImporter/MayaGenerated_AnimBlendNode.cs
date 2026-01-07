@@ -1,5 +1,6 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // NodeType: animBlend
-// Phase-1: meaningful decode + best-effort evaluation.
+// Production: meaningful decode + best-effort evaluation.
 //
 // Supports scalar OR vector inputs:
 // - If inputA/inputB have 3 tokens -> Vector3 mode

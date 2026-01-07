@@ -1,4 +1,5 @@
-﻿#if UNITY_EDITOR
+﻿// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Linq;

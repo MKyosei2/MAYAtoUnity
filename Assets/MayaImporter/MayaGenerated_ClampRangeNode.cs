@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 // NodeType: clampRange (Phase C: non-empty decode)
 
 using UnityEngine;

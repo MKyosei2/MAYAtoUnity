@@ -5,11 +5,11 @@ namespace MayaImporter.Core
 {
     /// <summary>
     /// Phase B:
-    /// ‘Sƒm[ƒh‚ÉuUnity‚¾‚¯‚ÅŒŸØ‚Å‚«‚é100%‚ÌØ‹’v‚ğ•t—^‚·‚éÅI‰»ˆ—B
-    /// - MayaOpaqueNodeRuntime: Ä\’zÏ‚İƒ}[ƒJ[
-    /// - MayaOpaqueAttributePreview: Raw‘®«ƒvƒŒƒrƒ…[
-    /// - MayaOpaqueConnectionPreview: Ú‘±ƒvƒŒƒrƒ…[
-    /// - MayaDecodedAttributeSummary: Œ^ƒTƒ}ƒŠiŠù‘¶j
+    /// å…¨ãƒãƒ¼ãƒ‰ã«ã€ŒUnityã ã‘ã§æ¤œè¨¼ã§ãã‚‹100%ã®è¨¼æ‹ ã€ã‚’ä»˜ä¸ã™ã‚‹æœ€çµ‚å‡¦ç†ã€‚
+    /// - MayaOpaqueNodeRuntime: å†æ§‹ç¯‰æ¸ˆã¿ãƒãƒ¼ã‚«ãƒ¼
+    /// - MayaOpaqueAttributePreview: Rawå±æ€§ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼
+    /// - MayaOpaqueConnectionPreview: æ¥ç¶šãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼
+    /// - MayaDecodedAttributeSummary: æ—¢å­˜ã®ã‚«ãƒ†ã‚´ãƒªåˆ¥ã‚µãƒãƒª
     /// </summary>
     public static class MayaNodeRepresentationFinalizer
     {

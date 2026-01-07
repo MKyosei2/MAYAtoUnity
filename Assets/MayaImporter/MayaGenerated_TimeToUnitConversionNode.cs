@@ -1,5 +1,6 @@
-﻿// NodeType: timeToUnitConversion
-// Phase-1: meaningful decode + publish scalar output.
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// NodeType: timeToUnitConversion
+// Production: meaningful decode + publish scalar output.
 //
 // Best-effort:
 //  output = input * conversionFactor

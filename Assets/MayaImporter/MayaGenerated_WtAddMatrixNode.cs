@@ -1,3 +1,4 @@
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
 ﻿// Assets/MayaImporter/MayaGenerated_WtAddMatrixNode.cs
 // NodeType: wtAddMatrix (PhaseC implemented)
 // - Collect wtMatrix[i].matrixIn + wtMatrix[i].weightIn

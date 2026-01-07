@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,10 +16,10 @@ namespace MayaImporter.Animation
         private static readonly Regex RxKtvRange = new Regex(@"^(?:\.)?ktv\[(\d+):(\d+)\]$", RegexOptions.Compiled);
 
         /// <summary>
-        /// animCurveTL/TA/TU ŒQ‚©‚ç legacy AnimationClip ‚ğ¶¬iƒV[ƒ“ã‚É‘¶İ‚µ‚Ä‚¢‚é‘O’ñj
-        /// - TryGetAttr(protected) ‚Íg‚í‚È‚¢iReflection‚Å‘®««‘‚ğ“Ç‚Şj
-        /// - ConnectionRole “™‚É‚ÍˆË‘¶‚µ‚È‚¢
-        /// - Root”z‰º‚É‘¶İ‚·‚éTransform‚¾‚¯‚ğ path ŒvZ‚µ‚ÄƒoƒCƒ“ƒh‚·‚é
+        /// animCurveTL/TA/TU Q legacy AnimationClip ğ¶iV[É‘İ‚Ä‚Oj
+        /// - TryGetAttr(protected) ÍgÈ‚iReflectionÅ‘Ç‚Şj
+        /// - ConnectionRole É‚ÍˆË‘È‚
+        /// - RootzÉ‘İ‚Transform path vZÄƒoCh
         /// </summary>
         public static AnimationClip BuildClipFromAnimCurves(
             IEnumerable<MayaNodeComponentBase> animCurves,
@@ -81,7 +82,7 @@ namespace MayaImporter.Animation
                     var path = ComputeRelativePath(root, driven);
                     if (path == null)
                     {
-                        // root”z‰º‚¶‚á‚È‚¢‚È‚çƒoƒCƒ“ƒh•s”\i‰ó‚³‚È‚¢‚½‚ßƒXƒLƒbƒvj
+                        // rootzÈ‚È‚oChs\ió‚³‚È‚ßƒXLbvj
                         continue;
                     }
 
@@ -215,7 +216,7 @@ namespace MayaImporter.Animation
         {
             if (target == root) return "";
 
-            // target ‚ª root ”z‰º‚©ŒŸØ‚µ‚Â‚Â‹t‚É’H‚Á‚Ä path ‚ğì‚é
+            // target  root zØ‚Â‚Â‹tÉ’H path 
             var stack = new Stack<string>();
             var t = target;
             while (t != null && t != root)

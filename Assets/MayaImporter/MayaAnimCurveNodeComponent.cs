@@ -1,5 +1,6 @@
-﻿// Assets/MayaImporter/MayaAnimCurveNodeComponent.cs
-// Phase-1 강화版:
+// PATCH: ProductionImpl v6 (Unity-only, retention-first)
+// Assets/MayaImporter/MayaAnimCurveNodeComponent.cs
+// Production 강화版:
 // - ktv/kix/kiy/kox/koy を decode して keys[] を生成（従来通り）
 // - preInfinity/postInfinity を WrapMode に best-effort 変換して保持
 // - Unity側に AnimCurveNode (times/values/tangents + wrap) を自動生成して “再構築可能” にする
@@ -17,15 +18,7 @@ using MayaImporter.Utils;
 namespace MayaImporter.Animation
 {
     [DisallowMultipleComponent]
-    [MayaNodeType("animCurveTA")]
-    [MayaNodeType("animCurveTL")]
-    [MayaNodeType("animCurveTU")]
-    [MayaNodeType("animCurveTT")]
-    [MayaNodeType("animCurveUA")]
-    [MayaNodeType("animCurveUL")]
-    [MayaNodeType("animCurveUU")]
-    [MayaNodeType("animCurveUT")]
-    public sealed class MayaAnimCurveNodeComponent : MayaNodeComponentBase
+    public abstract class MayaAnimCurveNodeComponent : MayaNodeComponentBase
     {
         [Serializable]
         public struct Key

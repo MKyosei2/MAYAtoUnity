@@ -1,3 +1,4 @@
+// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -44,9 +45,9 @@ namespace MayaImporter.Core
 
         /// <summary>
         /// Phase B:
-        /// - UDIM•¡”ƒ^ƒCƒ‹‚ÍŒ‡‘¹‚¹‚¸•ÛiB-5j
-        /// - Editorã‚ÌTextureImporterİ’è‚ğ usage ‚É‰‚¶‚Ä•â³iB-3j
-        /// - ‰æ‘œ“Ç‚ß‚È‚¢/Œ©‚Â‚©‚ç‚È‚¢ê‡‚à null ‚ğ•Ô‚µ‚Ä import ‚ğ~‚ß‚È‚¢i100%•Ûv‘zj
+        /// - UDIM^CÍŒÛiB-5j
+        /// - EditorTextureImporterİ’ usage É‰Ä•â³iB-3j
+        /// - æ‘œÇ‚ß‚È‚/Â‚È‚ê‡ null Ô‚ import ~ß‚È‚i100%Ûvzj
         /// </summary>
         public static Texture LoadTexture_BestEffort(
             MayaSceneData scene,
@@ -70,8 +71,8 @@ namespace MayaImporter.Core
                 var udimPaths = ResolveUdimTilePaths(scene, path, log);
                 AttachUdimSetComponent(meta.gameObject, path, udimPaths, log);
 
-                // •\¦—p‚Í 1001 ‚ğ—Dæ‚Åƒ[ƒhiUnity‚Ì•W€Shader‚Å‚ÍUDIM‹óŠÔ‚ğ³‚µ‚­•\¦‚Å‚«‚È‚¢‚½‚ßj
-                // ‚½‚¾‚µ gƒf[ƒ^Œ‡‘¹ƒ[ƒh ‚Í MayaUdimSetMetadata ‚ª•ÛØ‚·‚éB
+                // \p 1001 DÅƒ[hiUnityÌ•WShaderÅ‚UDIMÔ‚ğ³‚\Å‚È‚ßj
+                //  gf[^[h  MayaUdimSetMetadata ÛØ‚B
                 if (udimPaths.Count > 0)
                 {
                     var first = PickUdimPreviewTile(udimPaths);
@@ -114,7 +115,7 @@ namespace MayaImporter.Core
 #if UNITY_EDITOR
             if (!string.IsNullOrEmpty(assetsPath) && assetsPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
             {
-                // (B-3) usage‚É‰‚¶‚Ä TextureImporter İ’è•â³iNormal/Roughness/Metallic“™j
+                // (B-3) usageÉ‰ TextureImporter İ’â³iNormal/Roughness/Metallicj
                 MayaTextureImportSettings.EnsureImporterSettings_BestEffort(assetsPath, usage, log);
 
                 var projTex = AssetDatabase.LoadAssetAtPath<Texture2D>(assetsPath);
@@ -140,7 +141,7 @@ namespace MayaImporter.Core
                     return null;
                 }
 
-                // Normal/Roughness/Metallic ‚Í linear ˆµ‚¢‚ÉŠñ‚¹‚é
+                // Normal/Roughness/Metallic  linear ÉŠñ‚¹‚
                 var linear = (usage == MayaTextureUsage.Normal || usage == MayaTextureUsage.Roughness || usage == MayaTextureUsage.Metallic);
                 var tex = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: true, linear: linear);
                 tex.name = SanitizeName(Path.GetFileNameWithoutExtension(absPath));
