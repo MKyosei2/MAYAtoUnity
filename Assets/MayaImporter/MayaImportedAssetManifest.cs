@@ -82,21 +82,23 @@ namespace MayaImporter.Core
                 m.MbExtractedAsciiStatements = scene.MbExtractedAsciiStatementCount;
                 m.MbExtractedAsciiScore = scene.MbExtractedAsciiConfidence;
 
-                // detect actual parse path
-                bool embeddedUsed = false;
+                // detect actual parse path without requiring KeepRawStatements
+                m.MbEmbeddedAsciiParsed = scene.MbEmbeddedAsciiParsed;
+
                 bool chunkPlaceholderUsed = false;
-                var rs = scene.RawStatements;
-                if (rs != null)
+                if (scene.Nodes != null)
                 {
-                    for (int i = 0; i < rs.Count; i++)
+                    foreach (var kv in scene.Nodes)
                     {
-                        var s = rs[i];
-                        if (s == null) continue;
-                        if (string.Equals(s.Command, "mbEmbeddedAscii", StringComparison.Ordinal)) embeddedUsed = true;
-                        if (string.Equals(s.Command, "mbChunkPlaceholder", StringComparison.Ordinal)) chunkPlaceholderUsed = true;
+                        var n = kv.Value;
+                        if (n == null) continue;
+                        if (n.Provenance == MayaNodeProvenance.MbChunkPlaceholder)
+                        {
+                            chunkPlaceholderUsed = true;
+                            break;
+                        }
                     }
                 }
-                m.MbEmbeddedAsciiParsed = embeddedUsed;
                 m.MbUsedChunkPlaceholders = chunkPlaceholderUsed;
             }
 

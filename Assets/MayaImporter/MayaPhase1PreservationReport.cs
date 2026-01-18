@@ -53,16 +53,19 @@ namespace MayaImporter.Core
             sb.AppendLine("## 2) Parse path (best-effort)");
             sb.AppendLine();
 
-            bool usedEmbeddedAscii = false;
+            bool usedEmbeddedAscii = scene.MbEmbeddedAsciiParsed;
             bool usedChunkPlaceholder = false;
-            if (scene.RawStatements != null)
+            if (scene.Nodes != null)
             {
-                for (int i = 0; i < scene.RawStatements.Count; i++)
+                foreach (var kv in scene.Nodes)
                 {
-                    var rs = scene.RawStatements[i];
-                    if (rs == null) continue;
-                    if (string.Equals(rs.Command, "mbEmbeddedAscii", StringComparison.Ordinal)) usedEmbeddedAscii = true;
-                    if (string.Equals(rs.Command, "mbChunkPlaceholder", StringComparison.Ordinal)) usedChunkPlaceholder = true;
+                    var n = kv.Value;
+                    if (n == null) continue;
+                    if (n.Provenance == MayaNodeProvenance.MbChunkPlaceholder)
+                    {
+                        usedChunkPlaceholder = true;
+                        break;
+                    }
                 }
             }
 

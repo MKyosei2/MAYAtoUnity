@@ -85,7 +85,7 @@ namespace MayaImporter.Core
                 raw.Tokens = tokens;
                 raw.Command = (tokens != null && tokens.Count > 0) ? tokens[0] : null;
 
-                if (options.KeepRawStatements) scene.RawStatements.Add(raw);
+                scene.TryAddRawStatement(raw, options);
 
                 if (tokens == null || tokens.Count == 0)
                     continue;
@@ -98,9 +98,9 @@ namespace MayaImporter.Core
                         ParseCreateNode(tokens, raw, scene, log, ref currentNode);
                         break;
 
-                    case "setAttr":
-                        ParseSetAttr(tokens, raw, scene, log, ref currentNode);
-                        break;
+					case "setAttr":
+						ParseSetAttr(tokens, raw, scene, options, log, ref currentNode);
+						break;
 
                     case "connectAttr":
                         ParseConnectAttr(tokens, raw, scene, log);
@@ -202,7 +202,7 @@ namespace MayaImporter.Core
             currentNode = name;
         }
 
-        private static void ParseSetAttr(List<string> tokens, RawStatement raw, MayaSceneData scene, MayaImportLog log, ref string currentNode)
+		private static void ParseSetAttr(List<string> tokens, RawStatement raw, MayaSceneData scene, MayaImportOptions options, MayaImportLog log, ref string currentNode)
         {
             if (tokens.Count < 2) return;
 
@@ -257,7 +257,7 @@ namespace MayaImporter.Core
                 return;
 
             var node = scene.GetOrCreateNode(targetNode);
-            node.SetAttrStatements.Add(raw);
+            scene.TryAddSetAttrStatement(node, raw, options);
 
             var rav = new RawAttributeValue(typeName, values)
             {

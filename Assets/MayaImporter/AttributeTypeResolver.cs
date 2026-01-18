@@ -6,14 +6,14 @@ using UnityEngine;
 namespace MayaImporter.Utils
 {
     /// <summary>
-    /// Maya Attribute ‚ğuŒ^‚ÉˆË‘¶‚¹‚¸vˆµ‚¤‚½‚ß‚Ìƒ†[ƒeƒBƒŠƒeƒBB
-    /// Core ‘¤‚Ì Attribute ƒNƒ‰ƒX–¼‚ğˆêØQÆ‚µ‚È‚¢iUnity’P‘Ì / API‚È‚µ‘O’ñjB
+    /// Maya Attribute Â‚Ã°ÂuÂŒ^Â‚Ã‰ÂˆÃ‹Â‘Â¶Â‚Â¹Â‚Â¸ÂvÂˆÂµÂ‚Â¤Â‚Â½Â‚ÃŸÂ‚ÃŒÂƒÂ†Â[ÂƒeÂƒBÂƒÂŠÂƒeÂƒBÂB
+    /// Core Â‘Â¤Â‚ÃŒ Attribute ÂƒNÂƒÂ‰ÂƒXÂ–Â¼Â‚Ã°ÂˆÃªÂÃ˜ÂQÂÃ†Â‚ÂµÂ‚ÃˆÂ‚Â¢ÂiUnityÂ’PÂ‘ÃŒ / APIÂ‚ÃˆÂ‚ÂµÂ‘OÂ’Ã±ÂjÂB
     ///
-    /// —vŒF
-    /// - object attr ‚©‚ç
+    /// Â—vÂŒÂÂF
+    /// - object attr Â‚Â©Â‚Ã§
     ///   - string TypeName
     ///   - IReadOnlyList<string> ValueTokens
-    /// ‚ğƒŠƒtƒŒƒNƒVƒ‡ƒ“‚Åæ“¾‚Å‚«‚é‚±‚Æ
+    /// Â‚Ã°ÂƒÂŠÂƒtÂƒÂŒÂƒNÂƒVÂƒÂ‡ÂƒÂ“Â‚Ã…ÂÃ¦Â“Â¾Â‚Ã…Â‚Â«Â‚Ã©Â‚Â±Â‚Ã†
     /// </summary>
     public static class AttributeTypeResolver
     {
@@ -36,7 +36,7 @@ namespace MayaImporter.Utils
         }
 
         // =========================
-        // Public APIiŒ^”ñˆË‘¶j
+        // Public APIÂiÂŒ^Â”Ã±ÂˆÃ‹Â‘Â¶Âj
         // =========================
 
         public static MayaAttrKind GuessKind(object attr)
@@ -157,6 +157,16 @@ namespace MayaImporter.Utils
             tokens = null;
             typeName = null;
             if (attr == null) return false;
+
+	            // Fast-path for Core RawAttributeValue (no reflection).
+	            // Note: We avoid referencing Editor-only types or nested types that might not exist
+	            // in all configurations.
+	            if (attr is global::MayaImporter.Core.RawAttributeValue rav)
+	            {
+	                typeName = rav.TypeName;
+	                tokens = rav.ValueTokens;
+	                return tokens != null && tokens.Count > 0;
+	            }
 
             var t = attr.GetType();
 

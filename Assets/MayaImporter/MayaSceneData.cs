@@ -38,6 +38,12 @@ namespace MayaImporter.Core
         public readonly List<RawStatement> RawStatements = new List<RawStatement>();
 
         /// <summary>
+        /// Parse path flags (so audit doesn't depend on RawStatements being enabled).
+        /// </summary>
+        public bool MbEmbeddedAsciiParsed;
+        public bool MbUsedChunkPlaceholders;
+
+        /// <summary>
         /// Optional: .mb IFF chunk index + extracted strings.
         /// </summary>
         public MayaBinaryIndex MbIndex;
@@ -52,6 +58,51 @@ namespace MayaImporter.Core
         /// Optional: Mesh-related chunk hints extracted from .mb (additive).
         /// </summary>
         public readonly List<MayaMbMeshHint> MbMeshHints = new List<MayaMbMeshHint>(128);
+
+        // ============================
+        // Raw statement retention helpers (capped)
+        // ============================
+
+        /// <summary>
+        /// Adds a raw statement if enabled and within caps.
+        /// Designed to avoid unbounded memory usage.
+        /// </summary>
+        public bool TryAddRawStatement(RawStatement stmt, MayaImportOptions options)
+        {
+            if (stmt == null) return false;
+            options ??= new MayaImportOptions();
+            if (!options.KeepRawStatements) return false;
+
+            var max = options.RawStatementsMaxEntries;
+            if (max <= 0) max = 50_000;
+
+            if (RawStatements.Count >= max)
+                return false;
+
+            RawStatements.Add(stmt);
+            return true;
+        }
+
+        /// <summary>
+        /// Adds a setAttr statement to a node if enabled and within caps.
+        /// </summary>
+        public bool TryAddSetAttrStatement(NodeRecord node, RawStatement stmt, MayaImportOptions options)
+        {
+            if (node == null || stmt == null) return false;
+            options ??= new MayaImportOptions();
+            if (!options.KeepRawStatements) return false;
+
+            var maxPerNode = options.SetAttrStatementsMaxPerNode;
+            if (maxPerNode <= 0) maxPerNode = 256;
+
+	            // SetAttrStatements is always initialized (and is readonly) on NodeRecord.
+	            // We just cap additions here to avoid unbounded growth.
+	            if (node.SetAttrStatements.Count >= maxPerNode)
+                return false;
+
+            node.SetAttrStatements.Add(stmt);
+            return true;
+        }
 
 
         // ============================

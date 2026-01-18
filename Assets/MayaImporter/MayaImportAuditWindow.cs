@@ -123,25 +123,48 @@ namespace MayaImporter.Core
             var goByName = new Dictionary<string, GameObject>(StringComparer.Ordinal);
             var comps = new List<MayaNodeComponentBase>(records.Count);
 
+            // Hidden graph container for non-object Maya DG nodes (utility/shading/anim/etc)
+            var graphRoot = new GameObject("_MayaGraph");
+            graphRoot.transform.SetParent(root.transform, false);
+            graphRoot.hideFlags = HideFlags.HideInHierarchy | HideFlags.NotEditable;
+
             // 1) Create GameObjects + Components
             for (int i = 0; i < records.Count; i++)
             {
                 var rec = records[i];
+                if (rec == null) continue;
+
+                bool visibleObject = NodeFactory.ShouldCreateVisibleGameObject(rec.NodeType);
 
                 var go = new GameObject(GetLeaf(rec.Name));
+                if (!visibleObject)
+                {
+                    // Keep DG nodes out of the user's hierarchy while still representing them as components.
+                    go.hideFlags = HideFlags.HideInHierarchy | HideFlags.NotEditable;
+                    go.transform.SetParent(graphRoot.transform, false);
+                }
+
                 goByName[rec.Name] = go;
 
                 var comp = NodeFactory.CreateComponent(go, rec.NodeType);
                 if (comp == null) comp = go.AddComponent<MayaUnknownNodeComponent>();
 
+                // NOTE: We still inject the full connection list here for correctness.
+                // (Performance is addressed by connection indexing in other patches.)
                 comp.InitializeFromRecord(rec, scene.Connections);
                 comps.Add(comp);
             }
 
-            // 2) Parenting（親が除外されていた場合は、辿れる範囲で最も近い再構築親へ）
+            // Register mapping for downstream phases/tools
+            MayaBuildContext.RegisterUnityObjects(root, graphRoot, goByName);
+
+            // 2) Parenting (only for visible objects; hidden DG nodes stay under _MayaGraph)
+// 2) Parenting（親が除外されていた場合は、辿れる範囲で最も近い再構築親へ）
             for (int i = 0; i < records.Count; i++)
             {
                 var rec = records[i];
+                if (rec == null) continue;
+                if (!NodeFactory.ShouldCreateVisibleGameObject(rec.NodeType)) continue;
                 if (!goByName.TryGetValue(rec.Name, out var go)) continue;
 
                 Transform parentTr = root.transform;

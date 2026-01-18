@@ -260,21 +260,19 @@ namespace MayaImporter.Core
                             scene.MbExtractedAsciiStatementCount = info.StatementCount;
                             scene.MbExtractedAsciiConfidence = info.Score;
 
-                            if (options.KeepRawStatements)
+                            scene.TryAddRawStatement(new RawStatement
                             {
-                                scene.RawStatements.Add(new RawStatement
-                                {
-                                    LineStart = -1,
-                                    LineEnd = -1,
-                                    Command = "mbEmbeddedAscii",
-                                    Text = $"// Extracted embedded command-like text from .mb (segments={info.CandidateSegments}, statements~={info.StatementCount}, score={info.Score})."
-                                });
-                            }
+                                LineStart = -1,
+                                LineEnd = -1,
+                                Command = "mbEmbeddedAscii",
+                                Text = $"// Extracted embedded command-like text from .mb (segments={info.CandidateSegments}, statements~={info.StatementCount}, score={info.Score})."
+                            }, options);
 
                             var ma = new MayaAsciiParser();
                             var tmpScene = ma.ParseText($"{Path.GetFileName(path)}::embedded", extractedText, options, log);
 
                             MayaSceneMerger.MergeInto(scene, tmpScene, log, provenanceTag: "mb:embeddedAscii");
+                            scene.MbEmbeddedAsciiParsed = true;
                         }
                         else
                         {

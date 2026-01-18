@@ -221,5 +221,68 @@ namespace MayaImporter.Core
 
             return result;
         }
+
+        // --- Node category helpers (for scene reconstruction policy) ---
+        public static bool IsDagObjectNodeType(string nodeType)
+        {
+            if (string.IsNullOrEmpty(nodeType)) return false;
+            nodeType = nodeType.Trim();
+            // Core DAG-ish objects
+            switch (nodeType)
+            {
+                case "transform":
+                case "joint":
+                case "locator":
+                case "ikHandle":
+                case "ikEffector":
+                case "dagPose":
+                case "groupId":
+                case "groupParts":
+                    return true;
+            }
+            // Common solver transforms that often behave like DAG nodes
+            if (nodeType.EndsWith("Transform", StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
+
+        public static bool IsCameraOrLightNodeType(string nodeType)
+        {
+            if (string.IsNullOrEmpty(nodeType)) return false;
+            nodeType = nodeType.Trim();
+            if (string.Equals(nodeType, "camera", StringComparison.OrdinalIgnoreCase)) return true;
+            // Lights
+            switch (nodeType)
+            {
+                case "ambientLight":
+                case "directionalLight":
+                case "pointLight":
+                case "spotLight":
+                case "areaLight":
+                case "volumeLight":
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool IsShapeOrGeometryNodeType(string nodeType)
+        {
+            if (string.IsNullOrEmpty(nodeType)) return false;
+            nodeType = nodeType.Trim();
+            if (string.Equals(nodeType, "mesh", StringComparison.OrdinalIgnoreCase)) return true;
+            if (nodeType.EndsWith("Shape", StringComparison.OrdinalIgnoreCase)) return true;
+            // Common geometry families
+            if (nodeType.IndexOf("nurbs", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (nodeType.IndexOf("curve", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (nodeType.IndexOf("surface", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (nodeType.IndexOf("poly", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (nodeType.IndexOf("subdiv", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
+        }
+
+        public static bool ShouldCreateVisibleGameObject(string nodeType)
+        {
+            return IsDagObjectNodeType(nodeType) || IsCameraOrLightNodeType(nodeType) || IsShapeOrGeometryNodeType(nodeType);
+        }
     }
 }

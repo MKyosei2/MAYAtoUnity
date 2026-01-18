@@ -12,9 +12,28 @@ namespace MayaImporter.Core
     public sealed class MayaImportOptions
     {
         /// <summary>
-        /// Store all original statements in SceneData (higher memory, better debugging).
+        /// Store original statements in SceneData (higher memory, better debugging).
+        /// Default OFF for production performance.
         /// </summary>
-        public bool KeepRawStatements = true;
+        public bool KeepRawStatements = false;
+
+        /// <summary>
+        /// Hard cap for SceneData.RawStatements to avoid unbounded memory usage.
+        /// Only used when KeepRawStatements is true.
+        /// </summary>
+        public int RawStatementsMaxEntries = 50_000;
+
+        /// <summary>
+        /// Hard cap per node for NodeRecord.SetAttrStatements (per-node debugging).
+        /// Only used when KeepRawStatements is true.
+        /// </summary>
+        public int SetAttrStatementsMaxPerNode = 256;
+
+        /// <summary>
+        /// If true, store only a light-weight marker statements (audit) even when KeepRawStatements is false.
+        /// This helps reports/manifests without keeping full command history.
+        /// </summary>
+        public bool KeepAuditMarkersOnly = true;
 
         /// <summary>
         /// Create a single root GameObject named after the file.

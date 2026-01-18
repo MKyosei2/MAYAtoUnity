@@ -65,8 +65,8 @@ namespace MayaImporter.Core
 
                 var opt = CloneOptions(_options);
 
-                // 100%保持の根幹：Raw statements は常に保持
-                opt.KeepRawStatements = true;
+                // Raw statements はデバッグ/監査用のため任意 (デフォルトOFF)。
+                // 必要な場合のみ KeepRawStatements を明示的に ON にしてください。
 
                 // 選別（再構築/保存の制御）
                 MayaReconstructionSelection sel = null;
