@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V5: Unity-side JSON bridge importer + mesh attachment
+// MAYAIMPORTER_PATCH_V6: Unity-side JSON bridge importer + mesh/material/camera/light/animation attachment
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -59,7 +59,18 @@ namespace MayaImporter.Core
             {
                 var builder = new UnitySceneBuilder(options, log);
                 root = builder.Build(scene);
-                AttachMeshesFromJson(path, root, options, log);
+
+                MayaUnityExport export = LoadExport(path, log);
+                if (export != null)
+                {
+                    var materials = MayaUnityJsonRuntimeBuilder.BuildMaterials(export, options, log);
+                    AttachMeshesFromExport(export, root, options, log);
+                    MayaUnityJsonRuntimeBuilder.AssignMaterialsToRenderers(root, export, materials, log);
+                    MayaUnityJsonRuntimeBuilder.AttachCameras(root, export, options, log);
+                    MayaUnityJsonRuntimeBuilder.AttachLights(root, export, options, log);
+                    MayaUnityJsonRuntimeBuilder.AttachAnimation(root, export, options, log);
+                }
+
                 return root;
             }
             catch (Exception ex)
@@ -84,24 +95,25 @@ namespace MayaImporter.Core
             }
         }
 
-        private static void AttachMeshesFromJson(string path, GameObject root, MayaImportOptions options, MayaImportLog log)
+        private static MayaUnityExport LoadExport(string path, MayaImportLog log)
         {
-            if (root == null || string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-
-            MayaUnityExport export;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
             try
             {
-                export = JsonUtility.FromJson<MayaUnityExport>(File.ReadAllText(path));
+                return JsonUtility.FromJson<MayaUnityExport>(File.ReadAllText(path));
             }
             catch (Exception ex)
             {
-                log?.Warn("Could not reload JSON for mesh attachment: " + ex.Message);
-                return;
+                log?.Warn("Could not reload JSON for runtime attachment: " + ex.Message);
+                return null;
             }
+        }
 
-            if (export == null || export.meshes == null || export.meshes.Length == 0) return;
+        private static void AttachMeshesFromExport(MayaUnityExport export, GameObject root, MayaImportOptions options, MayaImportLog log)
+        {
+            if (root == null || export == null || export.meshes == null || export.meshes.Length == 0) return;
 
-            Dictionary<string, Transform> byMayaName = BuildTransformIndex(root);
+            Dictionary<string, Transform> byMayaName = MayaUnityJsonRuntimeBuilder.BuildTransformIndex(root);
             int attached = 0;
 
             foreach (var m in export.meshes)
@@ -110,16 +122,8 @@ namespace MayaImporter.Core
                 Mesh mesh = MayaUnityJsonMeshBuilder.BuildMesh(m, options, log);
                 if (mesh == null) continue;
 
-                string shapeName = StableName(m.path, m.name);
-                string parentName = StableName(m.parentPath, null);
-                Transform target = null;
+                Transform target = MayaUnityJsonRuntimeBuilder.FindTransform(byMayaName, m.path, m.parentPath, m.name, root.transform);
 
-                if (!string.IsNullOrEmpty(shapeName)) byMayaName.TryGetValue(shapeName, out target);
-                if (target == null && !string.IsNullOrEmpty(parentName)) byMayaName.TryGetValue(parentName, out target);
-                if (target == null) target = root.transform;
-
-                // Prefer assigning to the transform parent so Unity shows an actual renderable object
-                // where artists expect the mesh to be, while the shape node still remains inspectable.
                 MeshFilter mf = target.GetComponent<MeshFilter>();
                 if (mf == null) mf = target.gameObject.AddComponent<MeshFilter>();
                 mf.sharedMesh = mesh;
@@ -131,41 +135,6 @@ namespace MayaImporter.Core
             }
 
             log?.Info("Attached Unity meshes from Maya JSON: " + attached);
-        }
-
-        private static Dictionary<string, Transform> BuildTransformIndex(GameObject root)
-        {
-            var map = new Dictionary<string, Transform>(StringComparer.Ordinal);
-            if (root == null) return map;
-
-            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
-            foreach (var t in transforms)
-            {
-                string path = BuildUnityPathRelativeToRoot(root.transform, t);
-                if (!string.IsNullOrEmpty(path) && !map.ContainsKey(path)) map.Add(path, t);
-                if (!string.IsNullOrEmpty(t.name) && !map.ContainsKey(t.name)) map.Add(t.name, t);
-            }
-            return map;
-        }
-
-        private static string BuildUnityPathRelativeToRoot(Transform root, Transform target)
-        {
-            if (root == null || target == null) return string.Empty;
-            var parts = new List<string>();
-            Transform t = target;
-            while (t != null && t != root)
-            {
-                parts.Add(t.name);
-                t = t.parent;
-            }
-            parts.Reverse();
-            return string.Join("|", parts.ToArray());
-        }
-
-        private static string StableName(string path, string name)
-        {
-            if (!string.IsNullOrEmpty(path)) return path.Trim().Trim('|');
-            return string.IsNullOrEmpty(name) ? string.Empty : name.Trim();
         }
     }
 }
