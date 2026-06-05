@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V6: JSON bridge data models for geometry/material/camera/light/animation
+// MAYAIMPORTER_PATCH_V7: JSON bridge data models for geometry/material/camera/light/animation/skin/blendshape
 using System;
 
 namespace MayaImporter.Core
@@ -61,7 +61,29 @@ namespace MayaImporter.Core
         public float[] normals;
         public float[] uvs;
         public int[] indices;
+        public int[] sourceVertexIndices;
         public string[] materials;
+
+        // Skinning, flattened per exported vertex.
+        // boneIndices length = vertexCount * 4, boneWeights length = vertexCount * 4.
+        public string skinCluster;
+        public string[] skinJoints;
+        public int[] boneIndices;
+        public float[] boneWeights;
+        public float[] bindposes;
+
+        // Blendshape deltas are aligned to exported duplicated vertices.
+        public MayaUnityExportBlendShape[] blendShapes;
+    }
+
+    [Serializable]
+    public sealed class MayaUnityExportBlendShape
+    {
+        public string name;
+        public float weight;
+        public float[] deltaVertices;
+        public float[] deltaNormals;
+        public float[] deltaTangents;
     }
 
     [Serializable]
