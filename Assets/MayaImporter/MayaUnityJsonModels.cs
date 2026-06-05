@@ -54,6 +54,12 @@ namespace MayaImporter.Core
     {
         public int vertexCount;
         public int triangleCount;
+        public int sourceVertexCount;
+        public int sourceTriangleCount;
+        public float[] vertices;
+        public float[] normals;
+        public float[] uvs;
+        public int[] indices;
         public string[] materials;
     }
 
