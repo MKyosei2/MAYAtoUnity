@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V9: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape
+// MAYAIMPORTER_PATCH_V10: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape with API-safe fallbacks
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -51,7 +51,7 @@ namespace MayaImporter.Core
                 if (!map.ContainsKey(src.name)) map.Add(src.name, mat);
             }
 
-            log?.Info("Built Unity Materials from Maya JSON: " + map.Count);
+            if (log != null) log.Info("Built Unity Materials from Maya JSON: " + map.Count);
             return map;
         }
 
@@ -63,18 +63,15 @@ namespace MayaImporter.Core
             foreach (var cam in export.cameras)
             {
                 Transform t = FindTransform(index, cam.path, cam.parentPath, cam.name, root.transform);
+                if (t == null) continue;
                 Camera c = t.GetComponent<Camera>();
                 if (c == null) c = t.gameObject.AddComponent<Camera>();
                 c.nearClipPlane = cam.nearClipPlane > 0 ? cam.nearClipPlane : 0.1f;
                 c.farClipPlane = cam.farClipPlane > c.nearClipPlane ? cam.farClipPlane : 1000f;
-                if (cam.focalLength > 0f)
-                {
-                    c.usePhysicalProperties = true;
-                    c.focalLength = cam.focalLength;
-                }
+                ApplyCameraFocalLength(c, cam.focalLength, log);
                 count++;
             }
-            log?.Info("Attached Unity Cameras from Maya JSON: " + count);
+            if (log != null) log.Info("Attached Unity Cameras from Maya JSON: " + count);
         }
 
         public static void AttachLights(GameObject root, MayaUnityExport export, MayaImportOptions options, MayaImportLog log)
@@ -85,19 +82,20 @@ namespace MayaImporter.Core
             foreach (var src in export.lights)
             {
                 Transform t = FindTransform(index, src.path, src.parentPath, src.name, root.transform);
+                if (t == null) continue;
                 Light l = t.GetComponent<Light>();
                 if (l == null) l = t.gameObject.AddComponent<Light>();
                 string type = src.type ?? string.Empty;
                 if (Contains(type, "directional")) l.type = LightType.Directional;
                 else if (Contains(type, "spot")) l.type = LightType.Spot;
-                else if (Contains(type, "area")) l.type = LightType.Area;
+                else if (Contains(type, "area")) ApplyAreaLightTypeOrFallback(l, log);
                 else l.type = LightType.Point;
                 l.color = ToColor(src.color, Color.white);
                 l.intensity = src.intensity > 0 ? src.intensity : 1f;
                 if (l.type == LightType.Spot && src.coneAngle > 0) l.spotAngle = src.coneAngle;
                 count++;
             }
-            log?.Info("Attached Unity Lights from Maya JSON: " + count);
+            if (log != null) log.Info("Attached Unity Lights from Maya JSON: " + count);
         }
 
         public static void AttachAnimation(GameObject root, MayaUnityExport export, MayaImportOptions options, MayaImportLog log)
@@ -135,7 +133,7 @@ namespace MayaImporter.Core
             {
                 animation.AddClip(clip, clip.name);
                 animation.clip = clip;
-                log?.Info("Attached Unity AnimationClip from Maya JSON: curves=" + curveCount);
+                if (log != null) log.Info("Attached Unity AnimationClip from Maya JSON: curves=" + curveCount);
             }
         }
 
@@ -157,9 +155,9 @@ namespace MayaImporter.Core
                 mesh.bindposes = bindposes;
 
             MeshFilter mf = target.GetComponent<MeshFilter>();
-            if (mf != null) UnityEngine.Object.DestroyImmediate(mf);
+            DestroyComponentSafe(mf);
             MeshRenderer mr = target.GetComponent<MeshRenderer>();
-            if (mr != null) UnityEngine.Object.DestroyImmediate(mr);
+            DestroyComponentSafe(mr);
 
             SkinnedMeshRenderer smr = target.GetComponent<SkinnedMeshRenderer>();
             if (smr == null) smr = target.gameObject.AddComponent<SkinnedMeshRenderer>();
@@ -171,7 +169,7 @@ namespace MayaImporter.Core
             if (assigned.Count > 0) smr.sharedMaterials = assigned.ToArray();
             ApplyBlendShapeWeights(smr, src, log);
 
-            log?.Info("Attached SkinnedMeshRenderer: " + target.name + " bones=" + bones.Length);
+            if (log != null) log.Info("Attached SkinnedMeshRenderer: " + target.name + " bones=" + bones.Length);
             return true;
         }
 
@@ -196,7 +194,7 @@ namespace MayaImporter.Core
                 smr.SetBlendShapeWeight(index, bs.currentWeight);
                 applied++;
             }
-            if (applied > 0) log?.Info("Applied current blendshape weights: " + applied);
+            if (applied > 0 && log != null) log.Info("Applied current blendshape weights: " + applied);
         }
 
         public static void AssignMaterialsToRenderers(GameObject root, MayaUnityExport export, Dictionary<string, Material> materials, MayaImportLog log)
@@ -207,6 +205,7 @@ namespace MayaImporter.Core
             foreach (var mesh in export.meshes)
             {
                 Transform t = FindTransform(index, mesh.path, mesh.parentPath, mesh.name, root.transform);
+                if (t == null) continue;
                 var renderer = t.GetComponent<Renderer>();
                 if (renderer == null) continue;
                 var assigned = ResolveMaterials(mesh, materials);
@@ -217,7 +216,7 @@ namespace MayaImporter.Core
                 }
                 ApplyBlendShapeWeights(renderer, mesh, log);
             }
-            log?.Info("Assigned Unity Materials to renderers: " + count);
+            if (log != null) log.Info("Assigned Unity Materials to renderers: " + count);
         }
 
         public static List<Material> ResolveMaterials(MayaUnityExportMesh mesh, Dictionary<string, Material> materials)
@@ -245,6 +244,13 @@ namespace MayaImporter.Core
                 foreach (var kv in materials) { assigned.Add(kv.Value); break; }
             }
             return assigned;
+        }
+
+        public static void DestroyComponentSafe(Component component)
+        {
+            if (component == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(component);
+            else UnityEngine.Object.DestroyImmediate(component);
         }
 
         private static void AppendMaterial(List<Material> assigned, Dictionary<string, Material> materials, string name)
@@ -334,6 +340,37 @@ namespace MayaImporter.Core
             return fallback;
         }
 
+        private static void ApplyCameraFocalLength(Camera camera, float focalLength, MayaImportLog log)
+        {
+            if (camera == null || focalLength <= 0f) return;
+            try
+            {
+                var usePhysical = typeof(Camera).GetProperty("usePhysicalProperties");
+                if (usePhysical != null && usePhysical.CanWrite) usePhysical.SetValue(camera, true, null);
+                var focal = typeof(Camera).GetProperty("focalLength");
+                if (focal != null && focal.CanWrite) focal.SetValue(camera, focalLength, null);
+            }
+            catch (Exception ex)
+            {
+                if (log != null) log.Warn("Camera physical focal length skipped: " + ex.Message);
+            }
+        }
+
+        private static void ApplyAreaLightTypeOrFallback(Light light, MayaImportLog log)
+        {
+            if (light == null) return;
+            try
+            {
+                object parsed = Enum.Parse(typeof(LightType), "Area");
+                light.type = (LightType)parsed;
+            }
+            catch
+            {
+                light.type = LightType.Point;
+                if (log != null) log.Warn("Area light type is not available in this Unity version; using Point fallback.");
+            }
+        }
+
         private static Texture2D TryLoadTexture(string path, MayaImportLog log)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -345,7 +382,7 @@ namespace MayaImporter.Core
                 Texture2D assetTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
                 if (assetTexture != null)
                 {
-                    log?.Info("Loaded texture asset: " + assetPath);
+                    if (log != null) log.Info("Loaded texture asset: " + assetPath);
                     return assetTexture;
                 }
             }
@@ -359,13 +396,13 @@ namespace MayaImporter.Core
                 if (tex.LoadImage(bytes))
                 {
                     tex.name = Path.GetFileNameWithoutExtension(path);
-                    log?.Info("Loaded texture from file: " + path);
+                    if (log != null) log.Info("Loaded texture from file: " + path);
                     return tex;
                 }
             }
             catch (Exception ex)
             {
-                log?.Warn("Texture load failed: " + path + " / " + ex.Message);
+                if (log != null) log.Warn("Texture load failed: " + path + " / " + ex.Message);
             }
 
             return null;
