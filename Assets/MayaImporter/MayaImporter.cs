@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+// MAYAIMPORTER_PATCH_V5: report generation + builder name fix
 // MayaImporter/MayaImporter.cs
 using System.IO;
 using UnityEngine;
@@ -76,19 +76,37 @@ namespace MayaImporter.Core
             out MayaSceneData scene,
             out MayaImportLog log)
         {
+            options ??= new MayaImportOptions();
             scene = Parse(path, options, out log);
 
+            GameObject root = null;
             try
             {
-                var builder = new UnitySceneBuilderV2(options, log);
-                var root = builder.Build(scene);
+                // The repository contains UnitySceneBuilder. Keeping this call aligned avoids
+                // a compile-time mismatch with a non-existent UnitySceneBuilderV2 class.
+                var builder = new UnitySceneBuilder(options, log);
+                root = builder.Build(scene);
                 return root;
             }
             catch (System.Exception ex)
             {
                 log.Error($"Build failed: {ex.GetType().Name}: {ex.Message}");
-                var fb = new GameObject("MayaScene_BuildFailed");
-                return fb;
+                root = new GameObject("MayaScene_BuildFailed");
+                return root;
+            }
+            finally
+            {
+                if (options.GenerateImportReport)
+                {
+                    try
+                    {
+                        MayaImportReport.WriteMarkdownReport(scene, options, log, root != null ? root.name : null);
+                    }
+                    catch (System.Exception reportEx)
+                    {
+                        log.Warn($"Report generation failed: {reportEx.GetType().Name}: {reportEx.Message}");
+                    }
+                }
             }
         }
 
