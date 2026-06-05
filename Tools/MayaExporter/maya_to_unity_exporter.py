@@ -15,14 +15,19 @@ from __future__ import annotations
 import json
 import os
 import hashlib
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import maya.cmds as cmds
 except Exception:  # Allows documentation tools to import the file outside Maya.
     cmds = None
 
-SCHEMA_VERSION = 1
+try:
+    import maya.api.OpenMaya as om
+except Exception:  # Allows documentation tools to import the file outside Maya.
+    om = None
+
+SCHEMA_VERSION = 2
 
 
 def _require_maya() -> None:
@@ -128,10 +133,103 @@ def _collect_transforms() -> List[Dict[str, Any]]:
     return output
 
 
+def _dag_path(shape: str):
+    if om is None:
+        return None
+    try:
+        sel = om.MSelectionList()
+        sel.add(shape)
+        return sel.getDagPath(0)
+    except Exception:
+        return None
+
+
+def _try_get_face_uv(poly_iter: Any, local_index: int) -> Tuple[float, float]:
+    try:
+        uv = poly_iter.getUV(local_index)
+        return float(uv[0]), float(uv[1])
+    except Exception:
+        return 0.0, 0.0
+
+
+def _try_get_face_normal(poly_iter: Any, local_index: int, fallback: Any = None) -> Tuple[float, float, float]:
+    try:
+        n = poly_iter.getNormal(local_index, om.MSpace.kObject)
+        return float(n.x), float(n.y), float(n.z)
+    except Exception:
+        try:
+            n = fallback if fallback is not None else poly_iter.getNormal(om.MSpace.kObject)
+            return float(n.x), float(n.y), float(n.z)
+        except Exception:
+            return 0.0, 1.0, 0.0
+
+
+def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
+    """Return duplicated per-corner mesh data suitable for Unity.
+
+    Maya can have per-face-vertex UVs/normals. To avoid losing seams or hard normals,
+    this exporter duplicates vertices per triangle corner. This is heavier than indexed
+    shared-vertex export, but preserves visual fidelity better for a first bridge version.
+    """
+    result = {
+        "vertices": [],
+        "normals": [],
+        "uvs": [],
+        "indices": [],
+    }
+    dag = _dag_path(shape)
+    if dag is None or om is None:
+        return result
+
+    try:
+        fn = om.MFnMesh(dag)
+        points = fn.getPoints(om.MSpace.kObject)
+        it = om.MItMeshPolygon(dag)
+    except Exception:
+        return result
+
+    next_index = 0
+    while not it.isDone():
+        try:
+            count = it.polygonVertexCount()
+        except Exception:
+            count = 0
+        if count >= 3:
+            try:
+                face_normal = it.getNormal(om.MSpace.kObject)
+            except Exception:
+                face_normal = None
+
+            # Fan triangulation: (0, i, i+1). Maya has already validated polygon order.
+            for i in range(1, count - 1):
+                tri_locals = [0, i, i + 1]
+                for local in tri_locals:
+                    try:
+                        vertex_id = it.vertexIndex(local)
+                        p = points[vertex_id]
+                    except Exception:
+                        continue
+
+                    nx, ny, nz = _try_get_face_normal(it, local, face_normal)
+                    u, v = _try_get_face_uv(it, local)
+                    result["vertices"].extend([float(p.x), float(p.y), float(p.z)])
+                    result["normals"].extend([nx, ny, nz])
+                    result["uvs"].extend([u, v])
+                    result["indices"].append(next_index)
+                    next_index += 1
+        try:
+            it.next()
+        except Exception:
+            break
+
+    return result
+
+
 def _collect_meshes() -> List[Dict[str, Any]]:
     meshes = []
     for shape in sorted(cmds.ls(type="mesh", long=True) or []):
         transform = _parent_path(shape)
+        topology = _export_mesh_topology(shape)
         mesh_data: Dict[str, Any] = {
             "name": shape.split("|")[-1],
             "path": shape,
@@ -139,24 +237,25 @@ def _collect_meshes() -> List[Dict[str, Any]]:
             "uuid": _node_uuid(shape),
             "vertexCount": 0,
             "triangleCount": 0,
-            "vertices": [],
-            "normals": [],
-            "uvs": [],
-            "indices": [],
+            "vertices": topology.get("vertices", []),
+            "normals": topology.get("normals", []),
+            "uvs": topology.get("uvs", []),
+            "indices": topology.get("indices", []),
             "materials": [],
         }
 
         try:
             vertex_count = cmds.polyEvaluate(shape, vertex=True) or 0
             triangle_count = cmds.polyEvaluate(shape, triangle=True) or 0
-            mesh_data["vertexCount"] = int(vertex_count)
-            mesh_data["triangleCount"] = int(triangle_count)
+            mesh_data["sourceVertexCount"] = int(vertex_count)
+            mesh_data["sourceTriangleCount"] = int(triangle_count)
         except Exception:
-            pass
+            mesh_data["sourceVertexCount"] = 0
+            mesh_data["sourceTriangleCount"] = 0
 
-        # Exporting full topology robustly is best done with maya.api.OpenMaya.
-        # This first prototype records counts, paths, material assignments, and source identity.
-        # Full vertex/index export is the next milestone.
+        mesh_data["vertexCount"] = len(mesh_data["vertices"]) // 3
+        mesh_data["triangleCount"] = len(mesh_data["indices"]) // 3
+
         try:
             shading_engines = cmds.listConnections(shape, type="shadingEngine") or []
             mesh_data["materials"] = sorted(set(shading_engines))
@@ -263,7 +362,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v1 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v2 support set"})
     return unsupported
 
 
