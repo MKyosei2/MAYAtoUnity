@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V6: Unity-side JSON bridge importer + mesh/material/camera/light/animation attachment
+// MAYAIMPORTER_PATCH_V7: Unity-side JSON bridge importer + mesh/material/camera/light/animation/skinning attachment
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -64,7 +64,7 @@ namespace MayaImporter.Core
                 if (export != null)
                 {
                     var materials = MayaUnityJsonRuntimeBuilder.BuildMaterials(export, options, log);
-                    AttachMeshesFromExport(export, root, options, log);
+                    AttachMeshesFromExport(export, root, options, materials, log);
                     MayaUnityJsonRuntimeBuilder.AssignMaterialsToRenderers(root, export, materials, log);
                     MayaUnityJsonRuntimeBuilder.AttachCameras(root, export, options, log);
                     MayaUnityJsonRuntimeBuilder.AttachLights(root, export, options, log);
@@ -109,12 +109,13 @@ namespace MayaImporter.Core
             }
         }
 
-        private static void AttachMeshesFromExport(MayaUnityExport export, GameObject root, MayaImportOptions options, MayaImportLog log)
+        private static void AttachMeshesFromExport(MayaUnityExport export, GameObject root, MayaImportOptions options, Dictionary<string, Material> materials, MayaImportLog log)
         {
             if (root == null || export == null || export.meshes == null || export.meshes.Length == 0) return;
 
             Dictionary<string, Transform> byMayaName = MayaUnityJsonRuntimeBuilder.BuildTransformIndex(root);
-            int attached = 0;
+            int staticAttached = 0;
+            int skinnedAttached = 0;
 
             foreach (var m in export.meshes)
             {
@@ -124,6 +125,13 @@ namespace MayaImporter.Core
 
                 Transform target = MayaUnityJsonRuntimeBuilder.FindTransform(byMayaName, m.path, m.parentPath, m.name, root.transform);
 
+                bool skinned = MayaUnityJsonRuntimeBuilder.AttachSkinnedMeshIfNeeded(root, target, m, mesh, materials, log);
+                if (skinned)
+                {
+                    skinnedAttached++;
+                    continue;
+                }
+
                 MeshFilter mf = target.GetComponent<MeshFilter>();
                 if (mf == null) mf = target.gameObject.AddComponent<MeshFilter>();
                 mf.sharedMesh = mesh;
@@ -131,10 +139,10 @@ namespace MayaImporter.Core
                 MeshRenderer mr = target.GetComponent<MeshRenderer>();
                 if (mr == null) mr = target.gameObject.AddComponent<MeshRenderer>();
 
-                attached++;
+                staticAttached++;
             }
 
-            log?.Info("Attached Unity meshes from Maya JSON: " + attached);
+            log?.Info("Attached Unity meshes from Maya JSON: static=" + staticAttached + " skinned=" + skinnedAttached);
         }
     }
 }
