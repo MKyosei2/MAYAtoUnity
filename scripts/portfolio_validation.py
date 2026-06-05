@@ -3,7 +3,7 @@
 
 This script is intentionally dry-run first. It does not mutate Unity assets.
 It checks reviewer-critical files, sample coverage, README honesty, asmdef health,
-and writes Markdown/JSON reports so CI failures are inspectable instead of silent.
+golden exporter JSON integrity, and writes Markdown/JSON reports so CI failures are inspectable.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ class ValidationContext:
         errors: List[str] = []
         try:
             warnings, errors = fn()
-        except Exception as exc:  # keep the failure inspectable in the report
+        except Exception as exc:
             errors.append(f"Unhandled exception: {exc}")
             errors.append(traceback.format_exc())
         elapsed = (time.perf_counter() - start) * 1000.0
@@ -72,11 +72,15 @@ def require_paths(ctx: ValidationContext) -> tuple[list[str], list[str]]:
         "Assets/MayaImporter",
         "Assets/MayaImporter/MayaUnityJsonImporter.cs",
         "Assets/MayaImporter/MayaUnityJsonRuntimeBuilder.cs",
+        "Assets/MayaImporter/MayaImportProfiler.cs",
+        "Assets/MayaImporter/MayaUnityJsonSchemaValidator.cs",
+        "Assets/MayaImporter/MayaUnsupportedFeatureRegistry.cs",
         "Assets/MayaImporter/Editor",
         "Packages",
         "ProjectSettings",
         "Tools/MayaExporter",
-        "Samples",
+        "Samples/ExporterJson/SimpleMeshMaterialGolden.json",
+        "Samples/Expected/SimpleMeshMaterialGolden.expected.json",
     ]
     for rel in required:
         if not (ctx.root / rel).exists():
@@ -115,7 +119,7 @@ def check_samples(ctx: ValidationContext) -> tuple[list[str], list[str]]:
     if total == 0:
         errors.append("No .ma/.mb/.json validation samples found under Samples/.")
     if len(json_files) == 0:
-        warnings.append("No exporter JSON golden sample found. Add at least one sample under Samples/ExporterJson/.")
+        errors.append("No exporter JSON golden sample found. Add at least one sample under Samples/ExporterJson/.")
 
     manifest = {
         "tool": "MAYAtoUnity",
@@ -127,6 +131,68 @@ def check_samples(ctx: ValidationContext) -> tuple[list[str], list[str]]:
     manifest_path = ctx.report_dir / "maya_sample_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     ctx.generated_samples.append(str(manifest_path.relative_to(ctx.root)).replace("\\", "/"))
+    return warnings, errors
+
+
+def validate_golden_json(ctx: ValidationContext) -> tuple[list[str], list[str]]:
+    warnings: List[str] = []
+    errors: List[str] = []
+    expected_files = sorted((ctx.root / "Samples/Expected").glob("*.expected.json"))
+    if not expected_files:
+        errors.append("No expected golden metrics found under Samples/Expected/.")
+        return warnings, errors
+
+    summaries = []
+    for expected_path in expected_files:
+        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+        sample_path = ctx.root / expected["sample"]
+        if not sample_path.exists():
+            errors.append(f"Golden sample referenced by {expected_path.name} does not exist: {expected['sample']}")
+            continue
+        sample = json.loads(sample_path.read_text(encoding="utf-8"))
+        exp = expected.get("expected", {})
+        meshes = sample.get("meshes") or []
+        materials = sample.get("materials") or []
+        nodes = sample.get("nodes") or []
+        transforms = sample.get("transforms") or []
+        total_vertices = 0
+        total_triangles = 0
+        schema_errors: List[str] = []
+        for mesh_index, mesh in enumerate(meshes):
+            vertices = mesh.get("vertices") or []
+            indices = mesh.get("indices") or []
+            if len(vertices) % 3 != 0:
+                schema_errors.append(f"mesh[{mesh_index}] vertex float count is not divisible by 3")
+            vertex_count = len(vertices) // 3
+            if len(indices) % 3 != 0:
+                schema_errors.append(f"mesh[{mesh_index}] index count is not divisible by 3")
+            for i, idx in enumerate(indices):
+                if not isinstance(idx, int) or idx < 0 or idx >= vertex_count:
+                    schema_errors.append(f"mesh[{mesh_index}] index out of range at {i}: {idx}")
+                    break
+            total_vertices += vertex_count
+            total_triangles += len(indices) // 3
+        errors.extend(schema_errors)
+
+        checks = {
+            "schemaVersion": sample.get("schemaVersion"),
+            "nodeCount": len(nodes),
+            "transformCount": len(transforms),
+            "meshCount": len(meshes),
+            "materialCount": len(materials),
+            "totalVertices": total_vertices,
+            "totalTriangles": total_triangles,
+        }
+        for key, actual in checks.items():
+            target = expected.get(key) if key == "schemaVersion" else exp.get(key)
+            if target is not None and actual != target:
+                errors.append(f"{expected_path.name}: {key} expected {target}, got {actual}")
+        summaries.append({"expected": str(expected_path.relative_to(ctx.root)), "sample": expected["sample"], "checks": checks, "schemaErrors": schema_errors})
+
+    summary_path = ctx.report_dir / "maya_golden_validation.json"
+    ctx.report_dir.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps({"goldenSamples": summaries}, indent=2, ensure_ascii=False), encoding="utf-8")
+    ctx.generated_samples.append(str(summary_path.relative_to(ctx.root)).replace("\\", "/"))
     return warnings, errors
 
 
@@ -215,6 +281,7 @@ def main() -> int:
     ctx.run_stage("required_paths", lambda: require_paths(ctx))
     ctx.run_stage("readme_limitations", lambda: check_readme(ctx))
     ctx.run_stage("sample_manifest_generation", lambda: check_samples(ctx))
+    ctx.run_stage("golden_json_validation", lambda: validate_golden_json(ctx))
     ctx.run_stage("asmdef_static_validation", lambda: check_asmdefs(ctx))
     ctx.run_stage("dry_run_rollback_plan", lambda: generate_dry_run_plan(ctx))
 
