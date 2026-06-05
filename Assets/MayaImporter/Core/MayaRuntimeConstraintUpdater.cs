@@ -1,12 +1,11 @@
-// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+// MAYAIMPORTER_PATCH_V14: Constraint updater using Unity-version-safe object discovery
 using UnityEngine;
 using UnityEngine.Animations;
 
 namespace MayaImporter.Core
 {
     /// <summary>
-    /// ConstraintUpdater:
-    /// Prefab[hAeConstraintxXVčWB
+    /// ConstraintUpdater: refreshes imported ParentConstraint components after scene load.
     /// </summary>
     [DefaultExecutionOrder(-600)]
     public sealed class MayaRuntimeConstraintUpdater : MonoBehaviour
@@ -14,12 +13,12 @@ namespace MayaImporter.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void UpdateConstraints()
         {
-            var pcs = GameObject.FindObjectsOfType<ParentConstraint>(true);
+            var pcs = MayaRuntimeObjectFinder.FindAll<ParentConstraint>();
             foreach (var c in pcs)
             {
                 try
                 {
-                    if (c.sourceCount == 0) continue;
+                    if (c == null || c.sourceCount == 0) continue;
                     c.constraintActive = true;
                     c.locked = true;
                     c.constraintActive = false;
@@ -27,7 +26,7 @@ namespace MayaImporter.Core
                 catch { }
             }
 
-            Debug.Log($"[MayaImporter] ConstraintUpdater executed ({pcs.Length} ParentConstraints).");
+            Debug.Log("[MayaImporter] ConstraintUpdater executed (" + pcs.Length + " ParentConstraints).");
         }
     }
 }
