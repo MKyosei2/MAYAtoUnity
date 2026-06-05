@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V11: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape with API-safe fallbacks
+// MAYAIMPORTER_PATCH_V12: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape with namespace-safe Unity type references
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,14 +16,14 @@ namespace MayaImporter.Core
             var map = new Dictionary<string, Material>(StringComparer.Ordinal);
             if (export == null || export.materials == null) return map;
 
-            Shader shader = Shader.Find("Standard");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null) shader = Shader.Find("Diffuse");
+            UnityEngine.Shader shader = UnityEngine.Shader.Find("Standard");
+            if (shader == null) shader = UnityEngine.Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = UnityEngine.Shader.Find("Diffuse");
 
             foreach (var src in export.materials)
             {
                 if (src == null || string.IsNullOrEmpty(src.name)) continue;
-                Shader selected = shader != null ? shader : Shader.Find("Hidden/InternalErrorShader");
+                UnityEngine.Shader selected = shader != null ? shader : UnityEngine.Shader.Find("Hidden/InternalErrorShader");
                 if (selected == null) continue;
 
                 var mat = new Material(selected);
@@ -102,8 +102,8 @@ namespace MayaImporter.Core
         {
             if (root == null || export == null || export.animations == null || export.animations.Length == 0) return;
 
-            Animation animation = root.GetComponent<Animation>();
-            if (animation == null) animation = root.AddComponent<Animation>();
+            UnityEngine.Animation animation = root.GetComponent<UnityEngine.Animation>();
+            if (animation == null) animation = root.AddComponent<UnityEngine.Animation>();
             var clip = new AnimationClip();
             clip.name = options != null && !string.IsNullOrEmpty(options.AnimationClipName) ? options.AnimationClipName : "MayaJsonAnimation";
             clip.legacy = true;
