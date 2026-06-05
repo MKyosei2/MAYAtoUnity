@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MayaImporter.Core
@@ -18,17 +18,17 @@ namespace MayaImporter.Core
             if (_bound) return;
             _bound = true;
 
-            var allNodes = GameObject.FindObjectsOfType<MayaNodeComponentBase>(true);
+            var allNodes = MayaRuntimeObjectFinder.FindAll<MayaNodeComponentBase>();
             foreach (var n in allNodes)
             {
                 try { AutoBindNode(n); }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning($"[MayaImporter] AutoBind failed on {n.name}: {e.Message}");
+                    Debug.LogWarning("[MayaImporter] AutoBind failed on " + (n != null ? n.name : "null") + ": " + e.Message);
                 }
             }
 
-            Debug.Log($"[MayaImporter] 🔗 AutoBind finished. Bound {allNodes.Length} nodes.");
+            Debug.Log("[MayaImporter] AutoBind finished. Bound " + allNodes.Length + " nodes.");
         }
 
         private static void AutoBindNode(MayaNodeComponentBase node)
@@ -56,13 +56,11 @@ namespace MayaImporter.Core
                         if (smr == null)
                         {
                             var p = node.transform.parent;
-                            if (p != null)
-                                smr = p.GetComponent<SkinnedMeshRenderer>();
+                            if (p != null) smr = p.GetComponent<SkinnedMeshRenderer>();
                         }
 
                         if (smr != null && smr.sharedMesh != null)
                         {
-                            // ensure blendShapes exist
                             if (smr.sharedMesh.blendShapeCount > 0)
                                 node.gameObject.name += "_(BlendShapeBound)";
                         }
@@ -73,12 +71,11 @@ namespace MayaImporter.Core
 
         private static Transform FindSourceTransform(MayaNodeComponentBase node, string contains)
         {
-            var all = GameObject.FindObjectsOfType<MayaNodeComponentBase>(true);
+            var all = MayaRuntimeObjectFinder.FindAll<MayaNodeComponentBase>();
             foreach (var n in all)
             {
-                if (n == node) continue;
-                if (n.NodeName.Contains(contains))
-                    return n.transform;
+                if (n == null || n == node) continue;
+                if (!string.IsNullOrEmpty(n.NodeName) && n.NodeName.Contains(contains)) return n.transform;
             }
             return null;
         }
