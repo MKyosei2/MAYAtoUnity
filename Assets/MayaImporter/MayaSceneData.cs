@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V4_FIXED: compile fixes for provenance + deterministic .mb
+// MAYAIMPORTER_PATCH_V11: compile-safe scene data model for provenance + deterministic .mb + JSON bridge audits
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -8,135 +8,59 @@ namespace MayaImporter.Core
 {
     public sealed class MayaSceneData
     {
-        // NOTE: schema bump (.mb text recovery metadata)
-        public const int CurrentSchemaVersion = 8;
+        public const int CurrentSchemaVersion = 9;
 
         public int SchemaVersion = CurrentSchemaVersion;
-
         public string SourcePath;
-
         public MayaSourceKind SourceKind = MayaSourceKind.Unknown;
-
         public string RawAsciiText;
-
         public byte[] RawBinaryBytes;
-
         public string RawSha256;
 
-        /// <summary>
-        /// Units from currentUnit (linear/angle/time)
-        /// </summary>
         public readonly Dictionary<string, string> SceneUnits = new Dictionary<string, string>(StringComparer.Ordinal);
-
         public readonly Dictionary<string, NodeRecord> Nodes = new Dictionary<string, NodeRecord>(StringComparer.Ordinal);
-
         public readonly List<ConnectionRecord> Connections = new List<ConnectionRecord>();
-
-        /// <summary>
-        /// Optional: keep all original statements for debugging/audit.
-        /// </summary>
         public readonly List<RawStatement> RawStatements = new List<RawStatement>();
 
-        /// <summary>
-        /// Parse path flags (so audit doesn't depend on RawStatements being enabled).
-        /// </summary>
         public bool MbEmbeddedAsciiParsed;
         public bool MbUsedChunkPlaceholders;
-
-        /// <summary>
-        /// Optional: .mb IFF chunk index + extracted strings.
-        /// </summary>
         public MayaBinaryIndex MbIndex;
-
-        /// <summary>
-        /// Optional: Deterministic hints extracted from .mb (Unity-only, no Maya/Autodesk API).
-        /// These are additive debug/assist data and never replace the raw source-of-truth bytes.
-        /// </summary>
         public readonly List<string> MbStringTable = new List<string>(2048);
-
-        /// <summary>
-        /// Optional: Mesh-related chunk hints extracted from .mb (additive).
-        /// </summary>
         public readonly List<MayaMbMeshHint> MbMeshHints = new List<MayaMbMeshHint>(128);
 
-        // ============================
-        // Raw statement retention helpers (capped)
-        // ============================
-
-        /// <summary>
-        /// Adds a raw statement if enabled and within caps.
-        /// Designed to avoid unbounded memory usage.
-        /// </summary>
         public bool TryAddRawStatement(RawStatement stmt, MayaImportOptions options)
         {
             if (stmt == null) return false;
-            options ??= new MayaImportOptions();
+            if (options == null) options = new MayaImportOptions();
             if (!options.KeepRawStatements) return false;
 
-            var max = options.RawStatementsMaxEntries;
-            if (max <= 0) max = 50_000;
-
-            if (RawStatements.Count >= max)
-                return false;
+            int max = options.RawStatementsMaxEntries;
+            if (max <= 0) max = 50000;
+            if (RawStatements.Count >= max) return false;
 
             RawStatements.Add(stmt);
             return true;
         }
 
-        /// <summary>
-        /// Adds a setAttr statement to a node if enabled and within caps.
-        /// </summary>
         public bool TryAddSetAttrStatement(NodeRecord node, RawStatement stmt, MayaImportOptions options)
         {
             if (node == null || stmt == null) return false;
-            options ??= new MayaImportOptions();
+            if (options == null) options = new MayaImportOptions();
             if (!options.KeepRawStatements) return false;
 
-            var maxPerNode = options.SetAttrStatementsMaxPerNode;
+            int maxPerNode = options.SetAttrStatementsMaxPerNode;
             if (maxPerNode <= 0) maxPerNode = 256;
-
-	            // SetAttrStatements is always initialized (and is readonly) on NodeRecord.
-	            // We just cap additions here to avoid unbounded growth.
-	            if (node.SetAttrStatements.Count >= maxPerNode)
-                return false;
+            if (node.SetAttrStatements.Count >= maxPerNode) return false;
 
             node.SetAttrStatements.Add(stmt);
             return true;
         }
 
-
-        // ============================
-        // .mb Embedded ASCII extraction (new)
-        // ============================
-
-        /// <summary>
-        /// If extractor found command-like text inside .mb, it is stored here (capped).
-        /// </summary>
         public string MbExtractedAsciiText;
-
-        /// <summary>
-        /// Approx statement count (by ';') for extracted text.
-        /// </summary>
         public int MbExtractedAsciiStatementCount;
-
-        /// <summary>
-        /// Confidence score (higher means more command-like).
-        /// </summary>
         public int MbExtractedAsciiConfidence;
-
-        /// <summary>
-        /// Optional: statement count reconstructed from null-terminated strings.
-        /// </summary>
         public int MbNullTerminatedStatementCount;
-
-        /// <summary>
-        /// Optional: confidence score for null-terminated reconstruction.
-        /// </summary>
         public int MbNullTerminatedScore;
-
-        // ============================
-        // Structured (Category1)
-        // ============================
 
         public readonly List<MayaFileInfoEntry> FileInfo = new List<MayaFileInfoEntry>();
         public readonly List<MayaRequiresEntry> Requires = new List<MayaRequiresEntry>();
@@ -152,17 +76,14 @@ namespace MayaImporter.Core
         public readonly List<MayaEvalDeferredCommand> EvalDeferred = new List<MayaEvalDeferredCommand>();
         public readonly List<MayaExpressionCommand> Expressions = new List<MayaExpressionCommand>();
 
-        // ============================
-        // Helpers
-        // ============================
-
         public Dictionary<string, int> CountNodeTypes()
         {
             var map = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var kv in Nodes)
             {
-                var t = kv.Value.NodeType ?? "unknownType";
-                map.TryGetValue(t, out var c);
+                string t = kv.Value != null && kv.Value.NodeType != null ? kv.Value.NodeType : "unknownType";
+                int c;
+                map.TryGetValue(t, out c);
                 map[t] = c + 1;
             }
             return map;
@@ -170,10 +91,10 @@ namespace MayaImporter.Core
 
         public NodeRecord GetOrCreateNode(string nodeName, string nodeType = null)
         {
-            if (string.IsNullOrEmpty(nodeName))
-                throw new ArgumentException("nodeName is null/empty");
+            if (string.IsNullOrEmpty(nodeName)) throw new ArgumentException("nodeName is null/empty");
 
-            if (!Nodes.TryGetValue(nodeName, out var n))
+            NodeRecord n;
+            if (!Nodes.TryGetValue(nodeName, out n))
             {
                 n = new NodeRecord(nodeName, nodeType ?? "unknown");
                 Nodes[nodeName] = n;
@@ -186,11 +107,6 @@ namespace MayaImporter.Core
             return n;
         }
 
-        /// <summary>
-        /// Best-effort provenance setter (does not downgrade existing provenance).
-        /// Used for audit/proof: tracks whether a node was recovered from ASCII commands,
-        /// embedded .mb ASCII, deterministic string-table enumeration, chunk placeholders, etc.
-        /// </summary>
         public void MarkProvenance(string nodeName, MayaNodeProvenance provenance, string detail = null)
         {
             if (string.IsNullOrEmpty(nodeName)) return;
@@ -201,24 +117,23 @@ namespace MayaImporter.Core
             catch { return; }
             if (n == null) return;
 
-            // Don't downgrade provenance; only upgrade from Unknown, or from deterministic to stronger evidence.
             if (n.Provenance == MayaNodeProvenance.Unknown ||
                 (n.Provenance == MayaNodeProvenance.MbDeterministicStringTable && provenance != MayaNodeProvenance.MbDeterministicStringTable))
             {
                 n.Provenance = provenance;
             }
 
-            if (!string.IsNullOrEmpty(detail) && string.IsNullOrEmpty(n.ProvenanceDetail))
-                n.ProvenanceDetail = detail;
+            if (!string.IsNullOrEmpty(detail) && string.IsNullOrEmpty(n.ProvenanceDetail)) n.ProvenanceDetail = detail;
         }
 
         public void SetRawAscii(string sourcePath, string text)
         {
             SourcePath = sourcePath;
-            SourceKind = MayaSourceKind.AsciiMa;
+            string ext = !string.IsNullOrEmpty(sourcePath) ? System.IO.Path.GetExtension(sourcePath) : string.Empty;
+            SourceKind = string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase) ? MayaSourceKind.ExporterJson : MayaSourceKind.AsciiMa;
             RawAsciiText = text;
             RawBinaryBytes = null;
-            RawSha256 = ComputeSha256Hex(text != null ? Encoding.UTF8.GetBytes(text) : Array.Empty<byte>());
+            RawSha256 = ComputeSha256Hex(text != null ? Encoding.UTF8.GetBytes(text) : new byte[0]);
         }
 
         public void SetRawBinary(string sourcePath, byte[] bytes)
@@ -227,17 +142,18 @@ namespace MayaImporter.Core
             SourceKind = MayaSourceKind.BinaryMb;
             RawBinaryBytes = bytes;
             RawAsciiText = null;
-            RawSha256 = ComputeSha256Hex(bytes ?? Array.Empty<byte>());
+            RawSha256 = ComputeSha256Hex(bytes ?? new byte[0]);
         }
 
         private static string ComputeSha256Hex(byte[] bytes)
         {
-            using var sha = SHA256.Create();
-            var hash = sha.ComputeHash(bytes ?? Array.Empty<byte>());
-            var sb = new StringBuilder(hash.Length * 2);
-            for (int i = 0; i < hash.Length; i++)
-                sb.Append(hash[i].ToString("x2"));
-            return sb.ToString();
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(bytes ?? new byte[0]);
+                var sb = new StringBuilder(hash.Length * 2);
+                for (int i = 0; i < hash.Length; i++) sb.Append(hash[i].ToString("x2"));
+                return sb.ToString();
+            }
         }
     }
 
@@ -245,14 +161,10 @@ namespace MayaImporter.Core
     {
         Unknown = 0,
         AsciiMa = 1,
-        BinaryMb = 2
+        BinaryMb = 2,
+        ExporterJson = 3
     }
 
-    /// <summary>
-    /// Provenance of a NodeRecord (Unity-only, no Maya/Autodesk API).
-    /// Used for audit/proof: whether the node was recovered from ASCII commands,
-    /// extracted from .mb evidence, deterministic string table enumeration, or placeholders.
-    /// </summary>
     public enum MayaNodeProvenance
     {
         Unknown = 0,
@@ -264,36 +176,16 @@ namespace MayaImporter.Core
         MbHeuristic = 6
     }
 
-
     public sealed class NodeRecord
     {
         public string Name;
         public string NodeType;
         public string ParentName;
         public string Uuid;
-
-        /// <summary>
-        /// How this node was discovered/recovered in a Unity-only pipeline (for audits).
-        /// </summary>
         public MayaNodeProvenance Provenance = MayaNodeProvenance.Unknown;
-
-        /// <summary>
-        /// Additional provenance detail (best-effort), e.g. 'createNode', 'stringTable', 'chunkIndex'.
-        /// </summary>
         public string ProvenanceDetail;
-
-        /// <summary>
-        /// setAttr values: key is ".attr" (as written in .ma), value stores tokens + parsed typed value (best-effort).
-        /// </summary>
-        public readonly Dictionary<string, RawAttributeValue> Attributes =
-            new Dictionary<string, RawAttributeValue>(StringComparer.Ordinal);
-
-        /// <summary>
-        /// Keep raw setAttr statements that occurred under this node (useful for debugging).
-        /// </summary>
+        public readonly Dictionary<string, RawAttributeValue> Attributes = new Dictionary<string, RawAttributeValue>(StringComparer.Ordinal);
         public readonly List<RawStatement> SetAttrStatements = new List<RawStatement>();
-
-        // ===== Category1: per-node structured =====
         public readonly List<MayaAddAttrCommand> AddAttr = new List<MayaAddAttrCommand>();
         public readonly List<MayaDeleteAttrCommand> DeleteAttr = new List<MayaDeleteAttrCommand>();
         public readonly List<MayaLockNodeCommand> LockOps = new List<MayaLockNodeCommand>();
@@ -309,9 +201,7 @@ namespace MayaImporter.Core
     {
         public string SrcPlug;
         public string DstPlug;
-
         public bool Force;
-
         public ConnectionRecord(string src, string dst, bool force = false)
         {
             SrcPlug = src;
@@ -326,10 +216,6 @@ namespace MayaImporter.Core
         public int LineEnd;
         public string Command;
         public string Text;
-
-        /// <summary>
-        /// Tokenized form; may be null when tokenization failed.
-        /// </summary>
         public List<string> Tokens;
     }
 
@@ -363,50 +249,46 @@ namespace MayaImporter.Core
             if (tokens != null) ValueTokens.AddRange(tokens);
         }
 
-        public bool HasParsedValue => Kind != MayaAttrValueKind.Tokens && ParsedValue != null;
+        public bool HasParsedValue { get { return Kind != MayaAttrValueKind.Tokens && ParsedValue != null; } }
 
         public bool TryGetBool(out bool v)
         {
-            if (Kind == MayaAttrValueKind.Bool && ParsedValue is bool b) { v = b; return true; }
-            v = default; return false;
+            if (Kind == MayaAttrValueKind.Bool && ParsedValue is bool) { v = (bool)ParsedValue; return true; }
+            v = false; return false;
         }
 
         public bool TryGetInt(out int v)
         {
-            if (Kind == MayaAttrValueKind.Int && ParsedValue is int i) { v = i; return true; }
-            v = default; return false;
+            if (Kind == MayaAttrValueKind.Int && ParsedValue is int) { v = (int)ParsedValue; return true; }
+            v = 0; return false;
         }
 
         public bool TryGetFloat(out float v)
         {
-            if (Kind == MayaAttrValueKind.Float && ParsedValue is float f) { v = f; return true; }
-            v = default; return false;
+            if (Kind == MayaAttrValueKind.Float && ParsedValue is float) { v = (float)ParsedValue; return true; }
+            v = 0f; return false;
         }
 
         public bool TryGetFloatArray(out float[] v)
         {
             if ((Kind == MayaAttrValueKind.Vector2 || Kind == MayaAttrValueKind.Vector3 || Kind == MayaAttrValueKind.Vector4 || Kind == MayaAttrValueKind.Matrix4x4 || Kind == MayaAttrValueKind.FloatArray)
-                && ParsedValue is float[] a)
-            { v = a; return true; }
-            v = default; return false;
+                && ParsedValue is float[])
+            { v = (float[])ParsedValue; return true; }
+            v = null; return false;
         }
 
         public bool TryGetIntArray(out int[] v)
         {
-            if (Kind == MayaAttrValueKind.IntArray && ParsedValue is int[] a) { v = a; return true; }
-            v = default; return false;
+            if (Kind == MayaAttrValueKind.IntArray && ParsedValue is int[]) { v = (int[])ParsedValue; return true; }
+            v = null; return false;
         }
 
         public bool TryGetStringArray(out string[] v)
         {
-            if (Kind == MayaAttrValueKind.StringArray && ParsedValue is string[] a) { v = a; return true; }
-            v = default; return false;
+            if (Kind == MayaAttrValueKind.StringArray && ParsedValue is string[]) { v = (string[])ParsedValue; return true; }
+            v = null; return false;
         }
     }
-
-    // =========================================================
-    // Category1 Structured Command Records
-    // =========================================================
 
     public sealed class MayaFileInfoEntry
     {
@@ -446,27 +328,20 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public string TargetNode;
-
         public string LongName;
         public string ShortName;
         public string NiceName;
         public string Parent;
-
         public string AttributeType;
         public string DataType;
-
         public string DefaultValue;
         public string MinValue;
         public string MaxValue;
-
         public bool? Keyable;
         public bool? ChannelBox;
         public bool? Hidden;
-
         public bool? Multi;
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -474,10 +349,8 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public string TargetNode;
         public string Attribute;
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -485,9 +358,7 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public List<string> Targets = new List<string>();
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -495,9 +366,7 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public List<string> Targets = new List<string>();
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -505,9 +374,7 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public List<string> Targets = new List<string>();
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -515,9 +382,7 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public List<string> Targets = new List<string>();
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -525,9 +390,7 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public List<string> Targets = new List<string>();
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -535,9 +398,7 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public List<string> Targets = new List<string>();
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -545,10 +406,8 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public string Name;
         public string Script;
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 
@@ -556,7 +415,6 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public string Code;
     }
 
@@ -564,10 +422,8 @@ namespace MayaImporter.Core
     {
         public int LineStart;
         public int LineEnd;
-
         public string Name;
         public string Expression;
-
         public Dictionary<string, string> Flags = new Dictionary<string, string>(StringComparer.Ordinal);
     }
 }
