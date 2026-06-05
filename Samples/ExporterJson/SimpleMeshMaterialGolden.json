@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 10,
+  "sourceMayaFile": "Samples/Golden/simple_mesh_material.ma",
+  "sourceHash": "golden-sample",
+  "units": {
+    "linear": "centimeter",
+    "angle": "degree",
+    "time": "film"
+  },
+  "nodes": [
+    {
+      "name": "GoldenRoot",
+      "path": "GoldenRoot",
+      "type": "transform",
+      "uuid": "golden-root",
+      "parentPath": ""
+    },
+    {
+      "name": "GoldenMesh",
+      "path": "GoldenRoot|GoldenMesh",
+      "type": "mesh",
+      "uuid": "golden-mesh",
+      "parentPath": "GoldenRoot"
+    }
+  ],
+  "transforms": [
+    {
+      "name": "GoldenRoot",
+      "path": "GoldenRoot",
+      "type": "transform",
+      "uuid": "golden-root",
+      "parentPath": "",
+      "localPosition": [0, 0, 0],
+      "localRotation": [0, 0, 0],
+      "localScale": [1, 1, 1]
+    },
+    {
+      "name": "GoldenMesh",
+      "path": "GoldenRoot|GoldenMesh",
+      "type": "mesh",
+      "uuid": "golden-mesh",
+      "parentPath": "GoldenRoot",
+      "localPosition": [0, 0, 0],
+      "localRotation": [0, 0, 0],
+      "localScale": [1, 1, 1]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "GoldenMesh",
+      "path": "GoldenRoot|GoldenMesh",
+      "type": "mesh",
+      "uuid": "golden-mesh",
+      "parentPath": "GoldenRoot",
+      "vertexCount": 3,
+      "triangleCount": 1,
+      "sourceVertexCount": 3,
+      "sourceTriangleCount": 1,
+      "vertices": [0, 0, 0, 100, 0, 0, 0, 100, 0],
+      "normals": [0, 0, 1, 0, 0, 1, 0, 0, 1],
+      "uvs": [0, 0, 1, 0, 0, 1],
+      "indices": [0, 1, 2],
+      "materials": ["GoldenMaterial"],
+      "subMeshes": [
+        {
+          "material": "GoldenMaterial",
+          "indices": [0, 1, 2]
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "GoldenMaterial",
+      "type": "lambert",
+      "uuid": "golden-material",
+      "color": [0.8, 0.6, 0.4, 1.0]
+    }
+  ],
+  "textures": [],
+  "cameras": [],
+  "lights": [],
+  "joints": [],
+  "animations": [],
+  "constraints": [],
+  "unsupported": []
+}
