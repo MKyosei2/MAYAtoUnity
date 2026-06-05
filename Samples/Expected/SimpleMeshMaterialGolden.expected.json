@@ -1,0 +1,14 @@
+{
+  "sample": "Samples/ExporterJson/SimpleMeshMaterialGolden.json",
+  "schemaVersion": 10,
+  "expected": {
+    "nodeCount": 2,
+    "transformCount": 2,
+    "meshCount": 1,
+    "materialCount": 1,
+    "totalVertices": 3,
+    "totalTriangles": 1,
+    "warningBudget": 0,
+    "errorBudget": 0
+  }
+}
