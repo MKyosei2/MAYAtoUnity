@@ -27,7 +27,7 @@ try:
 except Exception:
     om = None
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def _require_maya() -> None:
@@ -222,17 +222,36 @@ def _export_mesh_topology(shape: str) -> Dict[str, Any]:
     return result
 
 
+def _shader_from_shading_engine(sg: str) -> str:
+    try:
+        shaders = cmds.listConnections(sg + ".surfaceShader", source=True, destination=False) or []
+        if shaders:
+            return shaders[0]
+    except Exception:
+        pass
+    return sg
+
+
 def _mesh_materials(shape: str) -> List[str]:
     try:
         sgs = cmds.listConnections(shape, type="shadingEngine") or []
-        return sorted(set(sgs))
+        shaders = [_shader_from_shading_engine(sg) for sg in sorted(set(sgs))]
+        return [s for s in shaders if s]
     except Exception:
         return []
 
 
-def _face_material_map(shape: str, materials: List[str]) -> Dict[int, str]:
+def _shape_shading_engines(shape: str) -> List[str]:
+    try:
+        return sorted(set(cmds.listConnections(shape, type="shadingEngine") or []))
+    except Exception:
+        return []
+
+
+def _face_material_map(shape: str, shading_engines: List[str]) -> Dict[int, str]:
     face_to_material: Dict[int, str] = {}
-    for sg in materials:
+    for sg in shading_engines:
+        material = _shader_from_shading_engine(sg)
         try:
             members = cmds.sets(sg, q=True) or []
         except Exception:
@@ -252,9 +271,9 @@ def _face_material_map(shape: str, materials: List[str]) -> Dict[int, str]:
                     if ":" in inside:
                         a, b = inside.split(":", 1)
                         for idx in range(int(a), int(b) + 1):
-                            face_to_material[idx] = sg
+                            face_to_material[idx] = material
                     else:
-                        face_to_material[int(inside)] = sg
+                        face_to_material[int(inside)] = material
                 except Exception:
                     pass
     return face_to_material
@@ -372,8 +391,10 @@ def _collect_meshes() -> List[Dict[str, Any]]:
     meshes = []
     for shape in sorted(cmds.ls(type="mesh", long=True) or []):
         topology = _export_mesh_topology(shape)
-        materials = _mesh_materials(shape)
-        face_materials = _face_material_map(shape, materials)
+        shading_engines = _shape_shading_engines(shape)
+        materials = [_shader_from_shading_engine(sg) for sg in shading_engines]
+        materials = [m for m in materials if m]
+        face_materials = _face_material_map(shape, shading_engines)
         skin = _skin_data_for_shape(shape, topology)
         mesh_data: Dict[str, Any] = {
             "name": shape.split("|")[-1],
@@ -560,7 +581,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v5 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v6 support set"})
     return unsupported
 
 
