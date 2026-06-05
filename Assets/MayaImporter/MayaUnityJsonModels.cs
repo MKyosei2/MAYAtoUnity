@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V9: JSON bridge data models for geometry/material/camera/light/animation/skin/blendshape/submesh
+// MAYAIMPORTER_PATCH_V10: JSON bridge data models for geometry/material/camera/light/animation/skin/blendshape/submesh/constraint
 using System;
 
 namespace MayaImporter.Core
@@ -19,6 +19,7 @@ namespace MayaImporter.Core
         public MayaUnityExportLight[] lights;
         public MayaUnityExportJoint[] joints;
         public MayaUnityExportAnimationCurve[] animations;
+        public MayaUnityExportConstraint[] constraints;
         public MayaUnityExportUnsupported[] unsupported;
     }
 
@@ -66,15 +67,12 @@ namespace MayaImporter.Core
         public string[] materials;
         public MayaUnityExportSubMesh[] subMeshes;
 
-        // Skinning, flattened per exported vertex.
-        // boneIndices length = vertexCount * 4, boneWeights length = vertexCount * 4.
         public string skinCluster;
         public string[] skinJoints;
         public int[] boneIndices;
         public float[] boneWeights;
         public float[] bindposes;
 
-        // Blendshape deltas are aligned to exported duplicated vertices.
         public MayaUnityExportBlendShape[] blendShapes;
     }
 
@@ -89,9 +87,7 @@ namespace MayaImporter.Core
     public sealed class MayaUnityExportBlendShape
     {
         public string name;
-        // Frame weight for AddBlendShapeFrame, usually 100.
         public float weight;
-        // Current Maya target value converted to Unity's 0-100 blendshape weight range.
         public float currentWeight;
         public float[] deltaVertices;
         public float[] deltaNormals;
@@ -153,6 +149,11 @@ namespace MayaImporter.Core
         public string unityProperty;
         public float[] times;
         public float[] values;
+    }
+
+    [Serializable]
+    public sealed class MayaUnityExportConstraint : MayaUnityExportNode
+    {
     }
 
     [Serializable]
