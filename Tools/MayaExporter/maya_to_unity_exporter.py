@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import os
 import hashlib
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 try:
     import maya.cmds as cmds
@@ -27,7 +27,8 @@ try:
 except Exception:
     om = None
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
+CONSTRAINT_TYPES = ["parentConstraint", "pointConstraint", "orientConstraint", "scaleConstraint", "aimConstraint"]
 
 
 def _require_maya() -> None:
@@ -263,15 +264,6 @@ def _shader_from_shading_engine(sg: str) -> str:
     except Exception:
         pass
     return sg
-
-
-def _mesh_materials(shape: str) -> List[str]:
-    try:
-        sgs = cmds.listConnections(shape, type="shadingEngine") or []
-        shaders = [_shader_from_shading_engine(sg) for sg in sorted(set(sgs))]
-        return [s for s in shaders if s]
-    except Exception:
-        return []
 
 
 def _shape_shading_engines(shape: str) -> List[str]:
@@ -728,6 +720,121 @@ def _collect_animation_curves() -> List[Dict[str, Any]]:
     return curves
 
 
+def _playback_times() -> List[float]:
+    try:
+        start = int(cmds.playbackOptions(q=True, min=True))
+        end = int(cmds.playbackOptions(q=True, max=True))
+    except Exception:
+        start, end = 1, 1
+    if end < start:
+        start, end = end, start
+    return [float(t) for t in range(start, end + 1)]
+
+
+def _constraint_nodes() -> List[str]:
+    nodes: List[str] = []
+    for t in CONSTRAINT_TYPES:
+        try:
+            nodes.extend(cmds.ls(type=t) or [])
+        except Exception:
+            pass
+    return sorted(set(nodes))
+
+
+def _constraint_driven_transforms() -> List[str]:
+    driven: Set[str] = set()
+    for constraint in _constraint_nodes():
+        try:
+            outputs = cmds.listConnections(constraint, plugs=True, source=False, destination=True) or []
+        except Exception:
+            outputs = []
+        for plug in outputs:
+            if "." not in plug:
+                continue
+            node, attr = plug.split(".", 1)
+            if attr not in ("translate", "rotate", "scale", "translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"):
+                continue
+            try:
+                if cmds.nodeType(node) == "transform":
+                    driven.add(_full_path(node))
+            except Exception:
+                pass
+    return sorted(driven)
+
+
+def _sample_attr(node: str, attr: str) -> float:
+    try:
+        return float(cmds.getAttr(node + "." + attr))
+    except Exception:
+        return 0.0
+
+
+def _collect_constraint_baked_animation_curves() -> List[Dict[str, Any]]:
+    driven = _constraint_driven_transforms()
+    if not driven:
+        return []
+
+    times = _playback_times()
+    if not times:
+        return []
+
+    try:
+        original_time = float(cmds.currentTime(q=True))
+    except Exception:
+        original_time = times[0]
+
+    attrs = ["translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"]
+    curves: List[Dict[str, Any]] = []
+    try:
+        sampled: Dict[Tuple[str, str], List[float]] = {(node, attr): [] for node in driven for attr in attrs}
+        for t in times:
+            try:
+                cmds.currentTime(t, edit=True)
+            except Exception:
+                pass
+            _force_evaluate()
+            for node in driven:
+                for attr in attrs:
+                    sampled[(node, attr)].append(_sample_attr(node, attr))
+
+        for node in driven:
+            for attr in attrs:
+                unity_prop = _unity_property_from_attr(attr)
+                if not unity_prop:
+                    continue
+                values = sampled.get((node, attr), [])
+                if not values:
+                    continue
+                curves.append({
+                    "targetPath": _full_path(node),
+                    "attribute": "bakedConstraint." + attr,
+                    "unityProperty": unity_prop,
+                    "times": times,
+                    "values": values,
+                })
+    finally:
+        try:
+            cmds.currentTime(original_time, edit=True)
+        except Exception:
+            pass
+        _force_evaluate()
+
+    return curves
+
+
+def _collect_constraints() -> List[Dict[str, Any]]:
+    output: List[Dict[str, Any]] = []
+    for node in _constraint_nodes():
+        output.append({
+            "name": node,
+            "path": _full_path(node),
+            "type": cmds.nodeType(node),
+            "uuid": _node_uuid(node),
+            "parentPath": _parent_path(node),
+        })
+    return output
+
+
 def _collect_unsupported() -> List[Dict[str, Any]]:
     supported = {
         "transform", "joint", "mesh", "camera",
@@ -735,6 +842,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         "lambert", "phong", "blinn", "surfaceShader", "aiStandardSurface", "standardSurface",
         "file", "place2dTexture", "shadingEngine", "skinCluster", "blendShape",
         "animCurveTL", "animCurveTA", "animCurveTU",
+        "parentConstraint", "pointConstraint", "orientConstraint", "scaleConstraint", "aimConstraint",
     }
     unsupported = []
     for node in sorted(cmds.ls() or []):
@@ -743,7 +851,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v8 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v9 support set"})
     return unsupported
 
 
@@ -764,6 +872,8 @@ def _scene_file_hash() -> str:
 def build_scene_dict() -> Dict[str, Any]:
     _require_maya()
     source_path = cmds.file(q=True, sceneName=True) or ""
+    native_curves = _collect_animation_curves()
+    baked_constraint_curves = _collect_constraint_baked_animation_curves()
     return {
         "schemaVersion": SCHEMA_VERSION,
         "sourceMayaFile": source_path,
@@ -783,8 +893,8 @@ def build_scene_dict() -> Dict[str, Any]:
         "joints": _collect_joints(),
         "skins": [],
         "blendShapes": [],
-        "animations": _collect_animation_curves(),
-        "constraints": [],
+        "animations": native_curves + baked_constraint_curves,
+        "constraints": _collect_constraints(),
         "unsupported": _collect_unsupported(),
     }
 
