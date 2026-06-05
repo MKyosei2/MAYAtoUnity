@@ -1,6 +1,7 @@
-// MAYAIMPORTER_PATCH_V8: Build Unity Mesh assets from Maya exporter JSON topology + submesh/skin/blendshape data
+// MAYAIMPORTER_PATCH_V10: Build Unity Mesh assets from Maya exporter JSON topology + validated submesh/skin/blendshape data
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace MayaImporter.Core
@@ -16,18 +17,19 @@ namespace MayaImporter.Core
 
         public static bool HasSkinning(MayaUnityExportMesh mesh)
         {
+            int vertexCount = mesh != null && mesh.vertices != null ? mesh.vertices.Length / 3 : 0;
             return mesh != null
                 && mesh.skinJoints != null && mesh.skinJoints.Length > 0
                 && mesh.boneIndices != null && mesh.boneWeights != null
-                && mesh.boneIndices.Length >= mesh.vertexCount * 4
-                && mesh.boneWeights.Length >= mesh.vertexCount * 4;
+                && mesh.boneIndices.Length >= vertexCount * 4
+                && mesh.boneWeights.Length >= vertexCount * 4;
         }
 
         public static Mesh BuildMesh(MayaUnityExportMesh src, MayaImportOptions options, MayaImportLog log)
         {
             if (!HasTopology(src))
             {
-                log?.Warn("JSON mesh has no topology: " + (src != null ? src.name : "null"));
+                if (log != null) log.Warn("JSON mesh has no topology: " + (src != null ? src.name : "null"));
                 return null;
             }
 
@@ -57,7 +59,11 @@ namespace MayaImporter.Core
                 mesh.SetUVs(0, uvs);
             }
 
-            SetTrianglesOrSubMeshes(mesh, src, options, log);
+            int triangleCount = SetTrianglesOrSubMeshes(mesh, src, options, vertices.Count, log);
+            if (triangleCount == 0)
+            {
+                if (log != null) log.Warn("JSON mesh has no valid triangles after index validation: " + mesh.name);
+            }
 
             if (src.normals != null && src.normals.Length / 3 == vertices.Count)
             {
@@ -81,49 +87,83 @@ namespace MayaImporter.Core
             ApplyBlendShapes(mesh, src, options, vertices.Count, log);
 
             mesh.RecalculateBounds();
-            try { mesh.RecalculateTangents(); } catch { }
+            TryRecalculateTangents(mesh);
 
-            log?.Info("Built Unity Mesh from Maya JSON: " + mesh.name + " vertices=" + vertices.Count + " triangles=" + (src.indices.Length / 3) + " subMeshes=" + mesh.subMeshCount);
+            if (log != null) log.Info("Built Unity Mesh from Maya JSON: " + mesh.name + " vertices=" + vertices.Count + " triangles=" + triangleCount + " subMeshes=" + mesh.subMeshCount);
             return mesh;
         }
 
-        private static void SetTrianglesOrSubMeshes(Mesh mesh, MayaUnityExportMesh src, MayaImportOptions options, MayaImportLog log)
+        private static int SetTrianglesOrSubMeshes(Mesh mesh, MayaUnityExportMesh src, MayaImportOptions options, int vertexCount, MayaImportLog log)
         {
+            int totalTriangles = 0;
             if (src.subMeshes != null && src.subMeshes.Length > 0)
             {
                 mesh.subMeshCount = src.subMeshes.Length;
                 for (int s = 0; s < src.subMeshes.Length; s++)
                 {
                     int[] raw = src.subMeshes[s] != null ? src.subMeshes[s].indices : null;
-                    var indices = BuildTriangleIndexList(raw, options);
-                    mesh.SetTriangles(indices, s);
+                    var indices = BuildTriangleIndexList(raw, options, vertexCount, log, src.name + ":subMesh" + s);
+                    if (indices.Count >= 3)
+                    {
+                        mesh.SetTriangles(indices, s);
+                        totalTriangles += indices.Count / 3;
+                    }
+                    else
+                    {
+                        mesh.SetTriangles(new int[0], s);
+                    }
                 }
-                log?.Info("Applied submeshes: " + src.name + " count=" + src.subMeshes.Length);
-                return;
+                if (log != null) log.Info("Applied submeshes: " + src.name + " count=" + src.subMeshes.Length);
+                return totalTriangles;
             }
 
-            mesh.SetTriangles(BuildTriangleIndexList(src.indices, options), 0);
+            var single = BuildTriangleIndexList(src.indices, options, vertexCount, log, src.name);
+            mesh.SetTriangles(single, 0);
+            return single.Count / 3;
         }
 
-        private static List<int> BuildTriangleIndexList(int[] raw, MayaImportOptions options)
+        private static List<int> BuildTriangleIndexList(int[] raw, MayaImportOptions options, int vertexCount, MayaImportLog log, string context)
         {
             var indices = new List<int>(raw != null ? raw.Length : 0);
-            if (raw == null) return indices;
+            if (raw == null || raw.Length < 3) return indices;
 
-            if (options != null && options.Conversion == CoordinateConversion.MayaToUnity_MirrorZ)
+            int dropped = 0;
+            bool mirror = options != null && options.Conversion == CoordinateConversion.MayaToUnity_MirrorZ;
+            for (int i = 0; i + 2 < raw.Length; i += 3)
             {
-                for (int i = 0; i + 2 < raw.Length; i += 3)
+                int a = raw[i + 0];
+                int b = raw[i + 1];
+                int c = raw[i + 2];
+                if (!IsValidIndex(a, vertexCount) || !IsValidIndex(b, vertexCount) || !IsValidIndex(c, vertexCount))
                 {
-                    indices.Add(raw[i + 0]);
-                    indices.Add(raw[i + 2]);
-                    indices.Add(raw[i + 1]);
+                    dropped++;
+                    continue;
+                }
+
+                if (mirror)
+                {
+                    indices.Add(a);
+                    indices.Add(c);
+                    indices.Add(b);
+                }
+                else
+                {
+                    indices.Add(a);
+                    indices.Add(b);
+                    indices.Add(c);
                 }
             }
-            else
+
+            if (dropped > 0 && log != null)
             {
-                indices.AddRange(raw);
+                log.Warn("Dropped invalid JSON mesh triangles: " + context + " dropped=" + dropped + " vertexCount=" + vertexCount);
             }
             return indices;
+        }
+
+        private static bool IsValidIndex(int index, int vertexCount)
+        {
+            return index >= 0 && index < vertexCount;
         }
 
         private static void ApplyBoneWeights(Mesh mesh, MayaUnityExportMesh src, int vertexCount, MayaImportLog log)
@@ -134,10 +174,10 @@ namespace MayaImporter.Core
             {
                 int baseIndex = v * 4;
                 var bw = new BoneWeight();
-                bw.boneIndex0 = SafeBoneIndex(src.boneIndices, baseIndex + 0);
-                bw.boneIndex1 = SafeBoneIndex(src.boneIndices, baseIndex + 1);
-                bw.boneIndex2 = SafeBoneIndex(src.boneIndices, baseIndex + 2);
-                bw.boneIndex3 = SafeBoneIndex(src.boneIndices, baseIndex + 3);
+                bw.boneIndex0 = SafeBoneIndex(src.boneIndices, baseIndex + 0, src.skinJoints.Length);
+                bw.boneIndex1 = SafeBoneIndex(src.boneIndices, baseIndex + 1, src.skinJoints.Length);
+                bw.boneIndex2 = SafeBoneIndex(src.boneIndices, baseIndex + 2, src.skinJoints.Length);
+                bw.boneIndex3 = SafeBoneIndex(src.boneIndices, baseIndex + 3, src.skinJoints.Length);
                 bw.weight0 = SafeWeight(src.boneWeights, baseIndex + 0);
                 bw.weight1 = SafeWeight(src.boneWeights, baseIndex + 1);
                 bw.weight2 = SafeWeight(src.boneWeights, baseIndex + 2);
@@ -146,17 +186,21 @@ namespace MayaImporter.Core
                 weights[v] = bw;
             }
             mesh.boneWeights = weights;
-            log?.Info("Applied bone weights to mesh: " + mesh.name + " vertices=" + vertexCount);
+            if (log != null) log.Info("Applied bone weights to mesh: " + mesh.name + " vertices=" + vertexCount);
         }
 
         private static void ApplyBlendShapes(Mesh mesh, MayaUnityExportMesh src, MayaImportOptions options, int vertexCount, MayaImportLog log)
         {
             if (src == null || src.blendShapes == null) return;
             int count = 0;
+            int skipped = 0;
             foreach (var bs in src.blendShapes)
             {
                 if (bs == null || string.IsNullOrEmpty(bs.name) || bs.deltaVertices == null || bs.deltaVertices.Length / 3 != vertexCount)
+                {
+                    skipped++;
                     continue;
+                }
 
                 Vector3[] dv = ToVector3Array(bs.deltaVertices, vertexCount, options);
                 Vector3[] dn = bs.deltaNormals != null && bs.deltaNormals.Length / 3 == vertexCount
@@ -167,10 +211,19 @@ namespace MayaImporter.Core
                     : new Vector3[vertexCount];
 
                 float weight = bs.weight <= 0f ? 100f : bs.weight;
-                mesh.AddBlendShapeFrame(bs.name, weight, dv, dn, dt);
-                count++;
+                try
+                {
+                    mesh.AddBlendShapeFrame(bs.name, weight, dv, dn, dt);
+                    count++;
+                }
+                catch (Exception ex)
+                {
+                    skipped++;
+                    if (log != null) log.Warn("BlendShape frame skipped: " + bs.name + " / " + ex.Message);
+                }
             }
-            if (count > 0) log?.Info("Applied blendshapes to mesh: " + mesh.name + " count=" + count);
+            if (count > 0 && log != null) log.Info("Applied blendshapes to mesh: " + mesh.name + " count=" + count);
+            if (skipped > 0 && log != null) log.Warn("Skipped blendshapes on mesh: " + mesh.name + " skipped=" + skipped);
         }
 
         private static Vector3[] ToVector3Array(float[] src, int vertexCount, MayaImportOptions options)
@@ -188,10 +241,12 @@ namespace MayaImporter.Core
             return dst;
         }
 
-        private static int SafeBoneIndex(int[] values, int index)
+        private static int SafeBoneIndex(int[] values, int index, int boneCount)
         {
             if (values == null || index < 0 || index >= values.Length) return 0;
-            return Mathf.Max(0, values[index]);
+            int value = Mathf.Max(0, values[index]);
+            if (boneCount > 0 && value >= boneCount) return 0;
+            return value;
         }
 
         private static float SafeWeight(float[] values, int index)
@@ -215,6 +270,19 @@ namespace MayaImporter.Core
             bw.weight1 /= sum;
             bw.weight2 /= sum;
             bw.weight3 /= sum;
+        }
+
+        private static void TryRecalculateTangents(Mesh mesh)
+        {
+            if (mesh == null) return;
+            try
+            {
+                MethodInfo method = typeof(Mesh).GetMethod("RecalculateTangents", Type.EmptyTypes);
+                if (method != null) method.Invoke(mesh, null);
+            }
+            catch
+            {
+            }
         }
     }
 }
