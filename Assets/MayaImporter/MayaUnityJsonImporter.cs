@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V11: Unity-side JSON bridge importer + mesh/material/camera/light/animation/skinning/blendshape attachment with safe renderer conversion
+// MAYAIMPORTER_PATCH_V13: Unity-side JSON bridge importer with shared import context cache
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -63,11 +63,12 @@ namespace MayaImporter.Core
                 MayaUnityExport export = LoadExport(path, log);
                 if (export != null)
                 {
+                    var context = MayaImportContext.Build(root);
                     var materials = MayaUnityJsonRuntimeBuilder.BuildMaterials(export, options, log);
-                    AttachMeshesFromExport(export, root, options, materials, log);
-                    MayaUnityJsonRuntimeBuilder.AssignMaterialsToRenderers(root, export, materials, log);
-                    MayaUnityJsonRuntimeBuilder.AttachCameras(root, export, options, log);
-                    MayaUnityJsonRuntimeBuilder.AttachLights(root, export, options, log);
+                    AttachMeshesFromExport(export, root, context, options, materials, log);
+                    MayaUnityJsonRuntimeBuilder.AssignMaterialsToRenderers(context, export, materials, log);
+                    MayaUnityJsonRuntimeBuilder.AttachCameras(context, export, options, log);
+                    MayaUnityJsonRuntimeBuilder.AttachLights(context, export, options, log);
                     MayaUnityJsonRuntimeBuilder.AttachAnimation(root, export, options, log);
                 }
 
@@ -109,11 +110,10 @@ namespace MayaImporter.Core
             }
         }
 
-        private static void AttachMeshesFromExport(MayaUnityExport export, GameObject root, MayaImportOptions options, Dictionary<string, Material> materials, MayaImportLog log)
+        private static void AttachMeshesFromExport(MayaUnityExport export, GameObject root, MayaImportContext context, MayaImportOptions options, Dictionary<string, Material> materials, MayaImportLog log)
         {
-            if (root == null || export == null || export.meshes == null || export.meshes.Length == 0) return;
+            if (root == null || context == null || export == null || export.meshes == null || export.meshes.Length == 0) return;
 
-            Dictionary<string, Transform> byMayaName = MayaUnityJsonRuntimeBuilder.BuildTransformIndex(root);
             int staticAttached = 0;
             int skinnedAttached = 0;
             int blendShapeAttached = 0;
@@ -124,14 +124,14 @@ namespace MayaImporter.Core
                 Mesh mesh = MayaUnityJsonMeshBuilder.BuildMesh(m, options, log);
                 if (mesh == null) continue;
 
-                Transform target = MayaUnityJsonRuntimeBuilder.FindTransform(byMayaName, m.path, m.parentPath, m.name, root.transform);
+                Transform target = context.FindTransform(m.path, m.parentPath, m.name, root.transform);
                 if (target == null)
                 {
                     if (log != null) log.Warn("Could not find target transform for JSON mesh: " + m.name);
                     continue;
                 }
 
-                bool skinned = MayaUnityJsonRuntimeBuilder.AttachSkinnedMeshIfNeeded(root, target, m, mesh, materials, log);
+                bool skinned = MayaUnityJsonRuntimeBuilder.AttachSkinnedMeshIfNeeded(context, target, m, mesh, materials, log);
                 if (skinned)
                 {
                     skinnedAttached++;
@@ -140,17 +140,16 @@ namespace MayaImporter.Core
 
                 if (HasBlendShapes(m))
                 {
-                    AttachBlendShapeRenderer(target, m, mesh, materials, log);
+                    AttachBlendShapeRenderer(context, target, m, mesh, materials, log);
                     blendShapeAttached++;
                     continue;
                 }
 
-                MeshFilter mf = target.GetComponent<MeshFilter>();
-                if (mf == null) mf = target.gameObject.AddComponent<MeshFilter>();
+                MeshFilter mf = context.GetOrAddComponent<MeshFilter>(target);
                 mf.sharedMesh = mesh;
 
-                MeshRenderer mr = target.GetComponent<MeshRenderer>();
-                if (mr == null) mr = target.gameObject.AddComponent<MeshRenderer>();
+                MeshRenderer mr = context.GetOrAddComponent<MeshRenderer>(target);
+                if (mr != null) { }
 
                 staticAttached++;
             }
@@ -163,17 +162,19 @@ namespace MayaImporter.Core
             return mesh != null && mesh.blendShapes != null && mesh.blendShapes.Length > 0;
         }
 
-        private static void AttachBlendShapeRenderer(Transform target, MayaUnityExportMesh src, Mesh mesh, Dictionary<string, Material> materials, MayaImportLog log)
+        private static void AttachBlendShapeRenderer(MayaImportContext context, Transform target, MayaUnityExportMesh src, Mesh mesh, Dictionary<string, Material> materials, MayaImportLog log)
         {
             if (target == null || mesh == null) return;
 
             MeshFilter mf = target.GetComponent<MeshFilter>();
             MayaUnityJsonRuntimeBuilder.DestroyComponentSafe(mf);
+            if (context != null) context.InvalidateComponent<MeshFilter>(target);
+
             MeshRenderer mr = target.GetComponent<MeshRenderer>();
             MayaUnityJsonRuntimeBuilder.DestroyComponentSafe(mr);
+            if (context != null) context.InvalidateComponent<MeshRenderer>(target);
 
-            SkinnedMeshRenderer smr = target.GetComponent<SkinnedMeshRenderer>();
-            if (smr == null) smr = target.gameObject.AddComponent<SkinnedMeshRenderer>();
+            SkinnedMeshRenderer smr = context != null ? context.GetOrAddComponent<SkinnedMeshRenderer>(target) : target.gameObject.AddComponent<SkinnedMeshRenderer>();
             smr.sharedMesh = mesh;
 
             List<Material> assigned = MayaUnityJsonRuntimeBuilder.ResolveMaterials(src, materials);
