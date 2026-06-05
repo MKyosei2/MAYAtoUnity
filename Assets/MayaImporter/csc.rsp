@@ -1,5 +1,1 @@
-# MAYAtoUnity generated/imported Maya node components intentionally preserve Maya attribute names.
-# Many Maya nodes expose attributes such as `enabled`, `camera`, `particleSystem`, and `runInEditMode`.
-# In Unity MonoBehaviour-derived components those names can hide inherited Unity members and produce CS0108 warnings.
-# These generated preservation fields are not Unity API overrides; suppress this warning for this importer assembly scope.
 -nowarn:0108
