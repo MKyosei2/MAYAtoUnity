@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V5: Convert Maya exporter JSON DTO to MayaSceneData
+// MAYAIMPORTER_PATCH_V6: Convert Maya exporter JSON DTO to MayaSceneData
 using System;
 using System.Collections.Generic;
 
@@ -33,6 +33,7 @@ namespace MayaImporter.Core
             AddCameras(scene, export.cameras);
             AddLights(scene, export.lights);
             AddJoints(scene, export.joints);
+            AddAnimationCurves(scene, export.animations);
             AddUnsupported(scene, export.unsupported);
 
             log?.Info("Maya exporter JSON converted. nodes=" + scene.Nodes.Count + " connections=" + scene.Connections.Count);
@@ -114,8 +115,9 @@ namespace MayaImporter.Core
                 rec.Uuid = mat.uuid;
                 rec.Provenance = MayaNodeProvenance.AsciiCommands;
                 rec.ProvenanceDetail = "MayaExporterJson:materials";
-                AddStringAttr(rec, ".exportedColor", mat.color);
-                AddStringAttr(rec, ".exportedTransparency", mat.transparency);
+                AddFloatArrayAttr(rec, ".exportedColor", mat.color, "float3");
+                AddFloatArrayAttr(rec, ".exportedTransparency", mat.transparency, "float3");
+                AddStringAttr(rec, ".diffuseTexture", mat.diffuseTexture);
             }
         }
 
@@ -148,6 +150,8 @@ namespace MayaImporter.Core
                 rec.Provenance = MayaNodeProvenance.AsciiCommands;
                 rec.ProvenanceDetail = "MayaExporterJson:cameras";
                 AddFloatAttr(rec, ".focalLength", cam.focalLength);
+                AddFloatAttr(rec, ".horizontalFilmAperture", cam.horizontalFilmAperture);
+                AddFloatAttr(rec, ".verticalFilmAperture", cam.verticalFilmAperture);
                 AddFloatAttr(rec, ".nearClipPlane", cam.nearClipPlane);
                 AddFloatAttr(rec, ".farClipPlane", cam.farClipPlane);
             }
@@ -165,8 +169,11 @@ namespace MayaImporter.Core
                 rec.ParentName = StableName(light.parentPath, null);
                 rec.Provenance = MayaNodeProvenance.AsciiCommands;
                 rec.ProvenanceDetail = "MayaExporterJson:lights";
-                AddStringAttr(rec, ".color", light.color);
+                AddFloatArrayAttr(rec, ".color", light.color, "float3");
                 AddFloatAttr(rec, ".intensity", light.intensity);
+                AddFloatAttr(rec, ".coneAngle", light.coneAngle);
+                AddFloatAttr(rec, ".penumbraAngle", light.penumbraAngle);
+                AddFloatAttr(rec, ".dropoff", light.dropoff);
             }
         }
 
@@ -187,6 +194,24 @@ namespace MayaImporter.Core
                 AddFloatArrayAttr(rec, ".s", joint.localScale, "double3");
                 AddFloatArrayAttr(rec, ".jo", joint.jointOrient, "double3");
                 AddFloatArrayAttr(rec, ".worldMatrix", joint.worldMatrix, "matrix");
+            }
+        }
+
+        private static void AddAnimationCurves(MayaSceneData scene, MayaUnityExportAnimationCurve[] animations)
+        {
+            if (animations == null) return;
+            for (int i = 0; i < animations.Length; i++)
+            {
+                var a = animations[i];
+                if (a == null || string.IsNullOrEmpty(a.targetPath)) continue;
+                var rec = scene.GetOrCreateNode("__jsonAnimCurve_" + i, "animCurveJson");
+                rec.Provenance = MayaNodeProvenance.AsciiCommands;
+                rec.ProvenanceDetail = "MayaExporterJson:animations";
+                AddStringAttr(rec, ".targetPath", a.targetPath);
+                AddStringAttr(rec, ".attribute", a.attribute);
+                AddStringAttr(rec, ".unityProperty", a.unityProperty);
+                AddFloatArrayAttr(rec, ".times", a.times, "floatArray");
+                AddFloatArrayAttr(rec, ".values", a.values, "floatArray");
             }
         }
 
