@@ -21,6 +21,9 @@ namespace MayaImporter.Core
                 return result;
             }
 
+            if (export.schemaVersion <= 0)
+                result.Warnings.Add("schemaVersion is missing or zero; importer will treat this as legacy exporter JSON.");
+
             if (export.meshes != null)
             {
                 for (int i = 0; i < export.meshes.Length; i++)
@@ -36,8 +39,8 @@ namespace MayaImporter.Core
             if (export.materials == null || export.materials.Length == 0)
                 result.Warnings.Add("JSON contains no material array.");
 
-            if (export.nodes == null || export.nodes.Length == 0)
-                result.Warnings.Add("JSON contains no node array; transform lookup will rely on fallback root where possible.");
+            if ((export.nodes == null || export.nodes.Length == 0) && (export.transforms == null || export.transforms.Length == 0))
+                result.Warnings.Add("JSON contains no node/transform array; transform lookup will rely on fallback root where possible.");
 
             return result;
         }
@@ -51,22 +54,28 @@ namespace MayaImporter.Core
             }
 
             int vertexCount = mesh.vertices != null ? mesh.vertices.Length / 3 : 0;
+            if (mesh.vertices != null && mesh.vertices.Length % 3 != 0)
+                result.Errors.Add("mesh[" + index + "] vertex float count is not divisible by 3: " + mesh.name);
             if (vertexCount <= 0)
                 result.Warnings.Add("mesh[" + index + "] has no vertices: " + mesh.name);
 
-            if (mesh.triangles != null)
+            if (mesh.indices != null)
             {
-                if (mesh.triangles.Length % 3 != 0)
+                if (mesh.indices.Length % 3 != 0)
                     result.Errors.Add("mesh[" + index + "] triangle index count is not divisible by 3: " + mesh.name);
-                for (int i = 0; i < mesh.triangles.Length; i++)
+                for (int i = 0; i < mesh.indices.Length; i++)
                 {
-                    int idx = mesh.triangles[i];
+                    int idx = mesh.indices[i];
                     if (idx < 0 || idx >= vertexCount)
                     {
                         result.Errors.Add("mesh[" + index + "] triangle index out of range at " + i + ": " + idx + " vertexCount=" + vertexCount);
                         break;
                     }
                 }
+            }
+            else if (vertexCount > 0)
+            {
+                result.Warnings.Add("mesh[" + index + "] has vertices but no triangle indices: " + mesh.name);
             }
 
             if (mesh.normals != null && mesh.normals.Length > 0 && mesh.normals.Length != vertexCount * 3)
