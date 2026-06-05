@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V6: Runtime builders for JSON bridge material/camera/light/animation
+// MAYAIMPORTER_PATCH_V7: Runtime builders for JSON bridge material/camera/light/animation/skinning
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -114,6 +114,41 @@ namespace MayaImporter.Core
             }
         }
 
+        public static bool AttachSkinnedMeshIfNeeded(GameObject root, Transform target, MayaUnityExportMesh src, Mesh mesh, Dictionary<string, Material> materials, MayaImportLog log)
+        {
+            if (root == null || target == null || src == null || mesh == null) return false;
+            if (!MayaUnityJsonMeshBuilder.HasSkinning(src)) return false;
+
+            var index = BuildTransformIndex(root);
+            var bones = new Transform[src.skinJoints.Length];
+            for (int i = 0; i < src.skinJoints.Length; i++)
+            {
+                Transform bone = FindTransform(index, src.skinJoints[i], null, src.skinJoints[i], root.transform);
+                bones[i] = bone != null ? bone : root.transform;
+            }
+
+            Matrix4x4[] bindposes = BuildBindposes(src, bones, target);
+            if (bindposes != null && bindposes.Length == bones.Length)
+                mesh.bindposes = bindposes;
+
+            MeshFilter mf = target.GetComponent<MeshFilter>();
+            if (mf != null) UnityEngine.Object.DestroyImmediate(mf);
+            MeshRenderer mr = target.GetComponent<MeshRenderer>();
+            if (mr != null) UnityEngine.Object.DestroyImmediate(mr);
+
+            SkinnedMeshRenderer smr = target.GetComponent<SkinnedMeshRenderer>();
+            if (smr == null) smr = target.gameObject.AddComponent<SkinnedMeshRenderer>();
+            smr.sharedMesh = mesh;
+            smr.bones = bones;
+            smr.rootBone = bones.Length > 0 ? bones[0] : root.transform;
+
+            List<Material> assigned = ResolveMaterials(src, materials);
+            if (assigned.Count > 0) smr.sharedMaterials = assigned.ToArray();
+
+            log?.Info("Attached SkinnedMeshRenderer: " + target.name + " bones=" + bones.Length);
+            return true;
+        }
+
         public static void AssignMaterialsToRenderers(GameObject root, MayaUnityExport export, Dictionary<string, Material> materials, MayaImportLog log)
         {
             if (root == null || export == null || export.meshes == null || materials == null) return;
@@ -124,21 +159,7 @@ namespace MayaImporter.Core
                 Transform t = FindTransform(index, mesh.path, mesh.parentPath, mesh.name, root.transform);
                 var renderer = t.GetComponent<Renderer>();
                 if (renderer == null) continue;
-
-                var assigned = new List<Material>();
-                if (mesh.materials != null)
-                {
-                    foreach (string name in mesh.materials)
-                    {
-                        if (string.IsNullOrEmpty(name)) continue;
-                        Material m;
-                        if (materials.TryGetValue(name, out m)) assigned.Add(m);
-                    }
-                }
-                if (assigned.Count == 0 && materials.Count > 0)
-                {
-                    foreach (var kv in materials) { assigned.Add(kv.Value); break; }
-                }
+                var assigned = ResolveMaterials(mesh, materials);
                 if (assigned.Count > 0)
                 {
                     renderer.sharedMaterials = assigned.ToArray();
@@ -146,6 +167,25 @@ namespace MayaImporter.Core
                 }
             }
             log?.Info("Assigned Unity Materials to renderers: " + count);
+        }
+
+        public static List<Material> ResolveMaterials(MayaUnityExportMesh mesh, Dictionary<string, Material> materials)
+        {
+            var assigned = new List<Material>();
+            if (mesh != null && mesh.materials != null && materials != null)
+            {
+                foreach (string name in mesh.materials)
+                {
+                    if (string.IsNullOrEmpty(name)) continue;
+                    Material m;
+                    if (materials.TryGetValue(name, out m)) assigned.Add(m);
+                }
+            }
+            if (assigned.Count == 0 && materials != null && materials.Count > 0)
+            {
+                foreach (var kv in materials) { assigned.Add(kv.Value); break; }
+            }
+            return assigned;
         }
 
         public static Dictionary<string, Transform> BuildTransformIndex(GameObject root)
@@ -199,6 +239,30 @@ namespace MayaImporter.Core
         {
             if (!string.IsNullOrEmpty(path)) return path.Trim().Trim('|');
             return string.IsNullOrEmpty(name) ? string.Empty : name.Trim();
+        }
+
+        private static Matrix4x4[] BuildBindposes(MayaUnityExportMesh src, Transform[] bones, Transform meshTransform)
+        {
+            if (src.bindposes != null && src.bindposes.Length == bones.Length * 16)
+            {
+                var bindposes = new Matrix4x4[bones.Length];
+                for (int i = 0; i < bones.Length; i++)
+                {
+                    int o = i * 16;
+                    var m = new Matrix4x4();
+                    m.m00 = src.bindposes[o + 0]; m.m01 = src.bindposes[o + 1]; m.m02 = src.bindposes[o + 2]; m.m03 = src.bindposes[o + 3];
+                    m.m10 = src.bindposes[o + 4]; m.m11 = src.bindposes[o + 5]; m.m12 = src.bindposes[o + 6]; m.m13 = src.bindposes[o + 7];
+                    m.m20 = src.bindposes[o + 8]; m.m21 = src.bindposes[o + 9]; m.m22 = src.bindposes[o + 10]; m.m23 = src.bindposes[o + 11];
+                    m.m30 = src.bindposes[o + 12]; m.m31 = src.bindposes[o + 13]; m.m32 = src.bindposes[o + 14]; m.m33 = src.bindposes[o + 15];
+                    bindposes[i] = m;
+                }
+                return bindposes;
+            }
+
+            var fallback = new Matrix4x4[bones.Length];
+            for (int i = 0; i < bones.Length; i++)
+                fallback[i] = bones[i].worldToLocalMatrix * meshTransform.localToWorldMatrix;
+            return fallback;
         }
 
         private static Color ToColor(float[] values, Color fallback)
