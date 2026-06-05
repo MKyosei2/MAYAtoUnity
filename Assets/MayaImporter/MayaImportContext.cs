@@ -5,6 +5,26 @@ using UnityEngine;
 
 namespace MayaImporter.Core
 {
+    public sealed class MayaImportContextStats
+    {
+        public int TransformLookupCount;
+        public int TransformCacheHits;
+        public int TransformCacheMisses;
+        public int ComponentLookupCount;
+        public int ComponentCacheHits;
+        public int ComponentCacheMisses;
+
+        public string ToReportString()
+        {
+            return "Transform lookups=" + TransformLookupCount +
+                   " hits=" + TransformCacheHits +
+                   " misses=" + TransformCacheMisses +
+                   " | Component lookups=" + ComponentLookupCount +
+                   " hits=" + ComponentCacheHits +
+                   " misses=" + ComponentCacheMisses;
+        }
+    }
+
     /// <summary>
     /// Per-import cache for expensive hierarchy lookups.
     /// Build once after UnitySceneBuilder creates the hierarchy, then share it across mesh,
@@ -18,12 +38,14 @@ namespace MayaImporter.Core
         public GameObject Root { get; private set; }
         public Transform RootTransform { get; private set; }
         public Dictionary<string, Transform> TransformIndex { get; private set; }
+        public MayaImportContextStats Stats { get; private set; }
 
         private MayaImportContext(GameObject root)
         {
             Root = root;
             RootTransform = root != null ? root.transform : null;
             TransformIndex = new Dictionary<string, Transform>(StringComparer.Ordinal);
+            Stats = new MayaImportContextStats();
             RebuildTransformIndex();
         }
 
@@ -53,13 +75,19 @@ namespace MayaImporter.Core
 
         public Transform FindTransform(string path, string parentPath, string name, Transform fallback)
         {
-            return FindTransformInIndex(TransformIndex, path, parentPath, name, fallback);
+            Stats.TransformLookupCount++;
+            bool hit;
+            Transform result = FindTransformInIndex(TransformIndex, path, parentPath, name, fallback, out hit);
+            if (hit) Stats.TransformCacheHits++;
+            else Stats.TransformCacheMisses++;
+            return result;
         }
 
         public T GetComponent<T>(Transform target) where T : Component
         {
             if (target == null) return null;
 
+            Stats.ComponentLookupCount++;
             Type type = typeof(T);
             Dictionary<Transform, Component> cache;
             if (!componentCaches.TryGetValue(type, out cache))
@@ -70,8 +98,12 @@ namespace MayaImporter.Core
 
             Component component;
             if (cache.TryGetValue(target, out component))
+            {
+                Stats.ComponentCacheHits++;
                 return component as T;
+            }
 
+            Stats.ComponentCacheMisses++;
             T typed = target.GetComponent<T>();
             cache[target] = typed;
             return typed;
@@ -114,14 +146,21 @@ namespace MayaImporter.Core
 
         public static Transform FindTransformInIndex(Dictionary<string, Transform> index, string path, string parentPath, string name, Transform fallback)
         {
+            bool hit;
+            return FindTransformInIndex(index, path, parentPath, name, fallback, out hit);
+        }
+
+        public static Transform FindTransformInIndex(Dictionary<string, Transform> index, string path, string parentPath, string name, Transform fallback, out bool cacheHit)
+        {
+            cacheHit = false;
             Transform t;
             string stable = StableName(path, name);
-            if (!string.IsNullOrEmpty(stable) && index != null && index.TryGetValue(stable, out t)) return t;
+            if (!string.IsNullOrEmpty(stable) && index != null && index.TryGetValue(stable, out t)) { cacheHit = true; return t; }
 
             string parent = StableName(parentPath, null);
-            if (!string.IsNullOrEmpty(parent) && index != null && index.TryGetValue(parent, out t)) return t;
+            if (!string.IsNullOrEmpty(parent) && index != null && index.TryGetValue(parent, out t)) { cacheHit = true; return t; }
 
-            if (!string.IsNullOrEmpty(name) && index != null && index.TryGetValue(name, out t)) return t;
+            if (!string.IsNullOrEmpty(name) && index != null && index.TryGetValue(name, out t)) { cacheHit = true; return t; }
             return fallback;
         }
 
