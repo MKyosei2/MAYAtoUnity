@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 9,
+  "sourceMayaFile": "Samples/ExporterJson/SimpleMeshMaterialAnimation.ma",
+  "sourceHash": "sample-json-validation",
+  "units": {
+    "linear": "cm",
+    "angle": "deg",
+    "time": "film"
+  },
+  "nodes": [
+    { "name": "JsonRoot", "path": "|JsonRoot", "type": "transform", "uuid": "sample-root", "parentPath": "" },
+    { "name": "JsonMesh", "path": "|JsonRoot|JsonMesh", "type": "transform", "uuid": "sample-mesh-xform", "parentPath": "|JsonRoot" },
+    { "name": "JsonMeshShape", "path": "|JsonRoot|JsonMesh|JsonMeshShape", "type": "mesh", "uuid": "sample-mesh-shape", "parentPath": "|JsonRoot|JsonMesh" },
+    { "name": "JsonCamera", "path": "|JsonRoot|JsonCamera", "type": "camera", "uuid": "sample-camera", "parentPath": "|JsonRoot" },
+    { "name": "JsonLight", "path": "|JsonRoot|JsonLight", "type": "directionalLight", "uuid": "sample-light", "parentPath": "|JsonRoot" }
+  ],
+  "transforms": [
+    {
+      "name": "JsonRoot",
+      "path": "|JsonRoot",
+      "type": "transform",
+      "uuid": "sample-root",
+      "parentPath": "",
+      "localPosition": [0, 0, 0],
+      "localRotation": [0, 0, 0],
+      "localScale": [1, 1, 1],
+      "localMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    },
+    {
+      "name": "JsonMesh",
+      "path": "|JsonRoot|JsonMesh",
+      "type": "transform",
+      "uuid": "sample-mesh-xform",
+      "parentPath": "|JsonRoot",
+      "localPosition": [0, 0, 0],
+      "localRotation": [0, 0, 0],
+      "localScale": [1, 1, 1],
+      "localMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    },
+    {
+      "name": "JsonCamera",
+      "path": "|JsonRoot|JsonCamera",
+      "type": "transform",
+      "uuid": "sample-camera-xform",
+      "parentPath": "|JsonRoot",
+      "localPosition": [0, 2, 8],
+      "localRotation": [0, 0, 0],
+      "localScale": [1, 1, 1],
+      "localMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2, 8, 1],
+      "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2, 8, 1]
+    },
+    {
+      "name": "JsonLight",
+      "path": "|JsonRoot|JsonLight",
+      "type": "transform",
+      "uuid": "sample-light-xform",
+      "parentPath": "|JsonRoot",
+      "localPosition": [0, 4, 0],
+      "localRotation": [45, 0, 0],
+      "localScale": [1, 1, 1],
+      "localMatrix": [1, 0, 0, 0, 0, 0.7071, 0.7071, 0, 0, -0.7071, 0.7071, 0, 0, 4, 0, 1],
+      "worldMatrix": [1, 0, 0, 0, 0, 0.7071, 0.7071, 0, 0, -0.7071, 0.7071, 0, 0, 4, 0, 1]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "JsonMeshShape",
+      "path": "|JsonRoot|JsonMesh|JsonMeshShape",
+      "type": "mesh",
+      "uuid": "sample-mesh-shape",
+      "parentPath": "|JsonRoot|JsonMesh",
+      "vertexCount": 6,
+      "triangleCount": 2,
+      "sourceVertexCount": 4,
+      "sourceTriangleCount": 2,
+      "vertices": [-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, -1, 1, 0, 1, -1, 0, 1],
+      "normals": [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+      "uvs": [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1],
+      "indices": [0, 1, 2, 3, 4, 5],
+      "sourceVertexIndices": [0, 1, 2, 0, 2, 3],
+      "triangleFaceIndices": [0, 1],
+      "materials": ["JsonRed", "JsonBlue"],
+      "subMeshes": [
+        { "material": "JsonRed", "indices": [0, 1, 2] },
+        { "material": "JsonBlue", "indices": [3, 4, 5] }
+      ],
+      "skinCluster": "",
+      "skinJoints": [],
+      "boneIndices": [],
+      "boneWeights": [],
+      "bindposes": [],
+      "blendShapes": [
+        {
+          "name": "RaiseCorner",
+          "weight": 100,
+          "currentWeight": 40,
+          "deltaVertices": [0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0],
+          "deltaNormals": [],
+          "deltaTangents": []
+        }
+      ]
+    }
+  ],
+  "materials": [
+    { "name": "JsonRed", "type": "lambert", "uuid": "sample-mat-red", "color": [1, 0.05, 0.05], "transparency": [0, 0, 0], "diffuseTexture": "" },
+    { "name": "JsonBlue", "type": "lambert", "uuid": "sample-mat-blue", "color": [0.05, 0.1, 1], "transparency": [0, 0, 0], "diffuseTexture": "" }
+  ],
+  "textures": [],
+  "cameras": [
+    {
+      "name": "JsonCamera",
+      "path": "|JsonRoot|JsonCamera",
+      "type": "camera",
+      "uuid": "sample-camera",
+      "parentPath": "|JsonRoot",
+      "focalLength": 35,
+      "horizontalFilmAperture": 1.417,
+      "verticalFilmAperture": 0.945,
+      "nearClipPlane": 0.1,
+      "farClipPlane": 1000
+    }
+  ],
+  "lights": [
+    {
+      "name": "JsonLight",
+      "path": "|JsonRoot|JsonLight",
+      "type": "directionalLight",
+      "uuid": "sample-light",
+      "parentPath": "|JsonRoot",
+      "color": [1, 1, 1],
+      "intensity": 1,
+      "coneAngle": 40,
+      "penumbraAngle": 0,
+      "dropoff": 0
+    }
+  ],
+  "joints": [],
+  "animations": [
+    {
+      "targetPath": "|JsonRoot|JsonMesh",
+      "attribute": "bakedConstraint.translateY",
+      "unityProperty": "localPosition.y",
+      "times": [0, 1, 2],
+      "values": [0, 1, 0]
+    }
+  ],
+  "constraints": [
+    { "name": "sampleParentConstraint", "path": "sampleParentConstraint", "type": "parentConstraint", "uuid": "sample-constraint", "parentPath": "" }
+  ],
+  "unsupported": []
+}
