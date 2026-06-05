@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V12: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape with namespace-safe Unity type references
+// MAYAIMPORTER_PATCH_V13: Runtime builders with shared import context cache for JSON bridge attachments
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -57,15 +57,18 @@ namespace MayaImporter.Core
 
         public static void AttachCameras(GameObject root, MayaUnityExport export, MayaImportOptions options, MayaImportLog log)
         {
-            if (root == null || export == null || export.cameras == null) return;
-            var index = BuildTransformIndex(root);
+            AttachCameras(MayaImportContext.Build(root), export, options, log);
+        }
+
+        public static void AttachCameras(MayaImportContext context, MayaUnityExport export, MayaImportOptions options, MayaImportLog log)
+        {
+            if (context == null || context.Root == null || export == null || export.cameras == null) return;
             int count = 0;
             foreach (var cam in export.cameras)
             {
-                Transform t = FindTransform(index, cam.path, cam.parentPath, cam.name, root.transform);
+                Transform t = context.FindTransform(cam.path, cam.parentPath, cam.name, context.RootTransform);
                 if (t == null) continue;
-                Camera c = t.GetComponent<Camera>();
-                if (c == null) c = t.gameObject.AddComponent<Camera>();
+                Camera c = context.GetOrAddComponent<Camera>(t);
                 c.nearClipPlane = cam.nearClipPlane > 0 ? cam.nearClipPlane : 0.1f;
                 c.farClipPlane = cam.farClipPlane > c.nearClipPlane ? cam.farClipPlane : 1000f;
                 ApplyCameraFocalLength(c, cam.focalLength, log);
@@ -76,15 +79,18 @@ namespace MayaImporter.Core
 
         public static void AttachLights(GameObject root, MayaUnityExport export, MayaImportOptions options, MayaImportLog log)
         {
-            if (root == null || export == null || export.lights == null) return;
-            var index = BuildTransformIndex(root);
+            AttachLights(MayaImportContext.Build(root), export, options, log);
+        }
+
+        public static void AttachLights(MayaImportContext context, MayaUnityExport export, MayaImportOptions options, MayaImportLog log)
+        {
+            if (context == null || context.Root == null || export == null || export.lights == null) return;
             int count = 0;
             foreach (var src in export.lights)
             {
-                Transform t = FindTransform(index, src.path, src.parentPath, src.name, root.transform);
+                Transform t = context.FindTransform(src.path, src.parentPath, src.name, context.RootTransform);
                 if (t == null) continue;
-                Light l = t.GetComponent<Light>();
-                if (l == null) l = t.gameObject.AddComponent<Light>();
+                Light l = context.GetOrAddComponent<Light>(t);
                 string type = src.type ?? string.Empty;
                 if (Contains(type, "directional")) l.type = LightType.Directional;
                 else if (Contains(type, "spot")) l.type = LightType.Spot;
@@ -139,15 +145,19 @@ namespace MayaImporter.Core
 
         public static bool AttachSkinnedMeshIfNeeded(GameObject root, Transform target, MayaUnityExportMesh src, Mesh mesh, Dictionary<string, Material> materials, MayaImportLog log)
         {
-            if (root == null || target == null || src == null || mesh == null) return false;
+            return AttachSkinnedMeshIfNeeded(MayaImportContext.Build(root), target, src, mesh, materials, log);
+        }
+
+        public static bool AttachSkinnedMeshIfNeeded(MayaImportContext context, Transform target, MayaUnityExportMesh src, Mesh mesh, Dictionary<string, Material> materials, MayaImportLog log)
+        {
+            if (context == null || context.Root == null || target == null || src == null || mesh == null) return false;
             if (!MayaUnityJsonMeshBuilder.HasSkinning(src)) return false;
 
-            var index = BuildTransformIndex(root);
             var bones = new Transform[src.skinJoints.Length];
             for (int i = 0; i < src.skinJoints.Length; i++)
             {
-                Transform bone = FindTransform(index, src.skinJoints[i], null, src.skinJoints[i], root.transform);
-                bones[i] = bone != null ? bone : root.transform;
+                Transform bone = context.FindTransform(src.skinJoints[i], null, src.skinJoints[i], context.RootTransform);
+                bones[i] = bone != null ? bone : context.RootTransform;
             }
 
             Matrix4x4[] bindposes = BuildBindposes(src, bones, target);
@@ -156,14 +166,15 @@ namespace MayaImporter.Core
 
             MeshFilter mf = target.GetComponent<MeshFilter>();
             DestroyComponentSafe(mf);
+            context.InvalidateComponent<MeshFilter>(target);
             MeshRenderer mr = target.GetComponent<MeshRenderer>();
             DestroyComponentSafe(mr);
+            context.InvalidateComponent<MeshRenderer>(target);
 
-            SkinnedMeshRenderer smr = target.GetComponent<SkinnedMeshRenderer>();
-            if (smr == null) smr = target.gameObject.AddComponent<SkinnedMeshRenderer>();
+            SkinnedMeshRenderer smr = context.GetOrAddComponent<SkinnedMeshRenderer>(target);
             smr.sharedMesh = mesh;
             smr.bones = bones;
-            smr.rootBone = bones.Length > 0 ? bones[0] : root.transform;
+            smr.rootBone = bones.Length > 0 ? bones[0] : context.RootTransform;
 
             List<Material> assigned = ResolveMaterials(src, materials);
             if (assigned.Count > 0) smr.sharedMaterials = assigned.ToArray();
@@ -199,12 +210,16 @@ namespace MayaImporter.Core
 
         public static void AssignMaterialsToRenderers(GameObject root, MayaUnityExport export, Dictionary<string, Material> materials, MayaImportLog log)
         {
-            if (root == null || export == null || export.meshes == null || materials == null) return;
-            var index = BuildTransformIndex(root);
+            AssignMaterialsToRenderers(MayaImportContext.Build(root), export, materials, log);
+        }
+
+        public static void AssignMaterialsToRenderers(MayaImportContext context, MayaUnityExport export, Dictionary<string, Material> materials, MayaImportLog log)
+        {
+            if (context == null || context.Root == null || export == null || export.meshes == null || materials == null) return;
             int count = 0;
             foreach (var mesh in export.meshes)
             {
-                Transform t = FindTransform(index, mesh.path, mesh.parentPath, mesh.name, root.transform);
+                Transform t = context.FindTransform(mesh.path, mesh.parentPath, mesh.name, context.RootTransform);
                 if (t == null) continue;
                 var renderer = t.GetComponent<Renderer>();
                 if (renderer == null) continue;
@@ -265,50 +280,17 @@ namespace MayaImporter.Core
 
         public static Dictionary<string, Transform> BuildTransformIndex(GameObject root)
         {
-            var map = new Dictionary<string, Transform>(StringComparer.Ordinal);
-            if (root == null) return map;
-            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
-            foreach (var t in transforms)
-            {
-                string path = BuildUnityPathRelativeToRoot(root.transform, t);
-                AddTransformAlias(map, path, t);
-                if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(root.name)) AddTransformAlias(map, root.name + "|" + path, t);
-                AddTransformAlias(map, t.name, t);
-            }
-            AddTransformAlias(map, root.name, root.transform);
-            return map;
-        }
-
-        private static void AddTransformAlias(Dictionary<string, Transform> map, string key, Transform transform)
-        {
-            if (map == null || transform == null || string.IsNullOrEmpty(key)) return;
-            string stable = StableName(key, null);
-            if (!string.IsNullOrEmpty(stable) && !map.ContainsKey(stable)) map.Add(stable, transform);
+            return MayaImportContext.Build(root).TransformIndex;
         }
 
         public static Transform FindTransform(Dictionary<string, Transform> index, string path, string parentPath, string name, Transform fallback)
         {
-            Transform t;
-            string stable = StableName(path, name);
-            if (!string.IsNullOrEmpty(stable) && index != null && index.TryGetValue(stable, out t)) return t;
-            string parent = StableName(parentPath, null);
-            if (!string.IsNullOrEmpty(parent) && index != null && index.TryGetValue(parent, out t)) return t;
-            if (!string.IsNullOrEmpty(name) && index != null && index.TryGetValue(name, out t)) return t;
-            return fallback;
+            return MayaImportContext.FindTransformInIndex(index, path, parentPath, name, fallback);
         }
 
         public static string BuildUnityPathRelativeToRoot(Transform root, Transform target)
         {
-            if (root == null || target == null) return string.Empty;
-            var parts = new List<string>();
-            Transform t = target;
-            while (t != null && t != root)
-            {
-                parts.Add(t.name);
-                t = t.parent;
-            }
-            parts.Reverse();
-            return string.Join("|", parts.ToArray());
+            return MayaImportContext.BuildUnityPathRelativeToRoot(root, target);
         }
 
         public static string MakeUnityRelativePath(Transform root, string mayaPath)
@@ -327,8 +309,7 @@ namespace MayaImporter.Core
 
         public static string StableName(string path, string name)
         {
-            if (!string.IsNullOrEmpty(path)) return path.Trim().Trim('|');
-            return string.IsNullOrEmpty(name) ? string.Empty : name.Trim();
+            return MayaImportContext.StableName(path, name);
         }
 
         private static Matrix4x4[] BuildBindposes(MayaUnityExportMesh src, Transform[] bones, Transform meshTransform)
