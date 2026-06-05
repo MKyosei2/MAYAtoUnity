@@ -27,7 +27,7 @@ try:
 except Exception:
     om = None
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def _require_maya() -> None:
@@ -169,7 +169,7 @@ def _try_get_face_normal(poly_iter: Any, local_index: int, fallback: Any = None)
 
 
 def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
-    result = {"vertices": [], "normals": [], "uvs": [], "indices": []}
+    result = {"vertices": [], "normals": [], "uvs": [], "indices": [], "sourceVertexIndices": []}
     dag = _dag_path(shape)
     if dag is None or om is None:
         return result
@@ -194,7 +194,7 @@ def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
             for i in range(1, count - 1):
                 for local in [0, i, i + 1]:
                     try:
-                        vertex_id = it.vertexIndex(local)
+                        vertex_id = int(it.vertexIndex(local))
                         p = points[vertex_id]
                     except Exception:
                         continue
@@ -204,6 +204,7 @@ def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
                     result["normals"].extend([nx, ny, nz])
                     result["uvs"].extend([u, v])
                     result["indices"].append(next_index)
+                    result["sourceVertexIndices"].append(vertex_id)
                     next_index += 1
         try:
             it.next()
@@ -220,10 +221,106 @@ def _mesh_materials(shape: str) -> List[str]:
         return []
 
 
+def _skin_cluster_for_shape(shape: str) -> str:
+    try:
+        history = cmds.listHistory(shape, pruneDagObjects=True) or []
+        for node in history:
+            if cmds.nodeType(node) == "skinCluster":
+                return node
+    except Exception:
+        pass
+    return ""
+
+
+def _skin_data_for_shape(shape: str, topology: Dict[str, Any]) -> Dict[str, Any]:
+    skin = _skin_cluster_for_shape(shape)
+    if not skin:
+        return {"skinCluster": "", "skinJoints": [], "boneIndices": [], "boneWeights": [], "bindposes": []}
+
+    try:
+        influences = cmds.skinCluster(skin, q=True, influence=True) or []
+    except Exception:
+        influences = []
+    if not influences:
+        return {"skinCluster": skin, "skinJoints": [], "boneIndices": [], "boneWeights": [], "bindposes": []}
+
+    source_indices = topology.get("sourceVertexIndices", []) or []
+    bone_indices: List[int] = []
+    bone_weights: List[float] = []
+    cache: Dict[int, List[Tuple[int, float]]] = {}
+
+    for vertex_id in source_indices:
+        vertex_id = int(vertex_id)
+        if vertex_id not in cache:
+            pairs: List[Tuple[int, float]] = []
+            component = f"{shape}.vtx[{vertex_id}]"
+            for i, joint in enumerate(influences):
+                try:
+                    w = float(cmds.skinPercent(skin, component, q=True, transform=joint))
+                except Exception:
+                    w = 0.0
+                if w > 0.000001:
+                    pairs.append((i, w))
+            pairs.sort(key=lambda p: p[1], reverse=True)
+            pairs = pairs[:4]
+            total = sum(w for _, w in pairs)
+            if total <= 0.0:
+                pairs = [(0, 1.0)]
+                total = 1.0
+            pairs = [(i, w / total) for i, w in pairs]
+            while len(pairs) < 4:
+                pairs.append((0, 0.0))
+            cache[vertex_id] = pairs
+        for i, w in cache[vertex_id]:
+            bone_indices.append(int(i))
+            bone_weights.append(float(w))
+
+    return {
+        "skinCluster": skin,
+        "skinJoints": [_full_path(j) for j in influences],
+        "boneIndices": bone_indices,
+        "boneWeights": bone_weights,
+        "bindposes": [],
+    }
+
+
+def _blendshape_data_for_shape(shape: str, topology: Dict[str, Any]) -> List[Dict[str, Any]]:
+    # Full target delta extraction is handled by Unity-side schema and mesh builder, but Maya API
+    # target extraction differs across versions and authoring patterns. For now, export stable
+    # blendShape node names and current weights as reportable metadata; real deltas can be filled
+    # by a later target-sampling pass.
+    output: List[Dict[str, Any]] = []
+    try:
+        history = cmds.listHistory(shape, pruneDagObjects=True) or []
+        for node in history:
+            if cmds.nodeType(node) != "blendShape":
+                continue
+            aliases = cmds.aliasAttr(node, q=True) or []
+            for i in range(0, len(aliases), 2):
+                alias = aliases[i]
+                plug = aliases[i + 1] if i + 1 < len(aliases) else ""
+                weight = 100.0
+                try:
+                    weight = float(cmds.getAttr(node + "." + alias))
+                except Exception:
+                    pass
+                output.append({
+                    "name": alias or node,
+                    "weight": weight,
+                    "deltaVertices": [],
+                    "deltaNormals": [],
+                    "deltaTangents": [],
+                })
+    except Exception:
+        pass
+    return output
+
+
 def _collect_meshes() -> List[Dict[str, Any]]:
     meshes = []
     for shape in sorted(cmds.ls(type="mesh", long=True) or []):
         topology = _export_mesh_topology(shape)
+        skin = _skin_data_for_shape(shape, topology)
         mesh_data: Dict[str, Any] = {
             "name": shape.split("|")[-1],
             "path": shape,
@@ -235,7 +332,14 @@ def _collect_meshes() -> List[Dict[str, Any]]:
             "normals": topology.get("normals", []),
             "uvs": topology.get("uvs", []),
             "indices": topology.get("indices", []),
+            "sourceVertexIndices": topology.get("sourceVertexIndices", []),
             "materials": _mesh_materials(shape),
+            "skinCluster": skin.get("skinCluster", ""),
+            "skinJoints": skin.get("skinJoints", []),
+            "boneIndices": skin.get("boneIndices", []),
+            "boneWeights": skin.get("boneWeights", []),
+            "bindposes": skin.get("bindposes", []),
+            "blendShapes": _blendshape_data_for_shape(shape, topology),
         }
         mesh_data["vertexCount"] = len(mesh_data["vertices"]) // 3
         mesh_data["triangleCount"] = len(mesh_data["indices"]) // 3
@@ -400,7 +504,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v3 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v4 support set"})
     return unsupported
 
 
