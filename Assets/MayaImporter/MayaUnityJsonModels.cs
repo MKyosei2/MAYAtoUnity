@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V8: JSON bridge data models for geometry/material/camera/light/animation/skin/blendshape/submesh
+// MAYAIMPORTER_PATCH_V9: JSON bridge data models for geometry/material/camera/light/animation/skin/blendshape/submesh
 using System;
 
 namespace MayaImporter.Core
@@ -89,7 +89,10 @@ namespace MayaImporter.Core
     public sealed class MayaUnityExportBlendShape
     {
         public string name;
+        // Frame weight for AddBlendShapeFrame, usually 100.
         public float weight;
+        // Current Maya target value converted to Unity's 0-100 blendshape weight range.
+        public float currentWeight;
         public float[] deltaVertices;
         public float[] deltaNormals;
         public float[] deltaTangents;
