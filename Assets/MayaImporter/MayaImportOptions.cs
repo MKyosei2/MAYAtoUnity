@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V4: mb provenance/evidence + audit determinism (generated 2026-01-05)
+// MAYAIMPORTER_PATCH_V5: import report + validation workflow options
 using System;
 
 namespace MayaImporter.Core
@@ -89,6 +89,47 @@ namespace MayaImporter.Core
         public bool KeepImportedRootInScene = true;
 
         // =========================================================
+        // Import report / validation proof
+        // =========================================================
+
+        /// <summary>
+        /// If true, ImportIntoScene writes a markdown audit report after parsing/building.
+        /// This report is intended for portfolio proof, QA, and regression checks.
+        /// </summary>
+        public bool GenerateImportReport = true;
+
+        /// <summary>
+        /// Folder where markdown import reports are written.
+        /// Relative Unity project paths such as Assets/MayaImported/Reports are supported.
+        /// </summary>
+        public string ReportOutputFolder = "Assets/MayaImported/Reports";
+
+        /// <summary>
+        /// If true, report includes a bounded list of unsupported / generic nodes.
+        /// </summary>
+        public bool ReportUnsupportedNodes = true;
+
+        /// <summary>
+        /// Maximum unsupported nodes listed in the report to keep files readable.
+        /// </summary>
+        public int ReportUnsupportedNodeMaxEntries = 256;
+
+        /// <summary>
+        /// If true, report includes a bounded node-type breakdown table.
+        /// </summary>
+        public bool ReportNodeTypeBreakdown = true;
+
+        /// <summary>
+        /// Maximum node types listed in the report.
+        /// </summary>
+        public int ReportNodeTypeMaxEntries = 256;
+
+        /// <summary>
+        /// If true, report includes node provenance breakdown for .mb recovery audits.
+        /// </summary>
+        public bool ReportProvenanceBreakdown = true;
+
+        // =========================================================
         // Portfolio / Proof components (Unity-only verification)
         // =========================================================
 
@@ -170,7 +211,6 @@ namespace MayaImporter.Core
         /// </summary>
         public int MbEmbeddedAsciiMaxChars = 4 * 1024 * 1024;
 
-        
         // =========================================================
         // .mb Phase0.5: Deterministic node enumeration (Unity-only, additive)
         // =========================================================
@@ -210,7 +250,7 @@ namespace MayaImporter.Core
 
         public bool MbTryTagTexturesFromStrings = true;
 
-// =========================================================
+        // =========================================================
         // .mb Phase1: preservation-first fallback
         // =========================================================
 
