@@ -1,7 +1,7 @@
-# MAYAtoUnity Maya-side exporter prototype
+# MAYAtoUnity Maya-side exporter
 # Run inside Autodesk Maya's Python environment.
 #
-# This exporter is the production-oriented bridge path for MAYAtoUnity:
+# Production-oriented bridge path:
 # Maya scene -> deterministic JSON -> Unity importer.
 #
 # Usage in Maya Script Editor:
@@ -19,15 +19,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import maya.cmds as cmds
-except Exception:  # Allows documentation tools to import the file outside Maya.
+except Exception:
     cmds = None
 
 try:
     import maya.api.OpenMaya as om
-except Exception:  # Allows documentation tools to import the file outside Maya.
+except Exception:
     om = None
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def _require_maya() -> None:
@@ -39,6 +39,27 @@ def _safe_get_attr(plug: str, default: Any = None) -> Any:
     try:
         if cmds.objExists(plug):
             return cmds.getAttr(plug)
+    except Exception:
+        pass
+    return default
+
+
+def _float_attr(node: str, attr: str, default: float = 0.0) -> float:
+    try:
+        return float(cmds.getAttr(node + "." + attr))
+    except Exception:
+        return default
+
+
+def _float3_attr(node: str, attr: str, default: Optional[List[float]] = None) -> List[float]:
+    default = default or [0.0, 0.0, 0.0]
+    try:
+        value = cmds.getAttr(node + "." + attr)
+        if isinstance(value, (list, tuple)):
+            if len(value) > 0 and isinstance(value[0], (list, tuple)):
+                return [float(value[0][0]), float(value[0][1]), float(value[0][2])]
+            if len(value) >= 3:
+                return [float(value[0]), float(value[1]), float(value[2])]
     except Exception:
         pass
     return default
@@ -70,32 +91,16 @@ def _parent_path(node: str) -> str:
 
 def _matrix_list(node: str) -> List[float]:
     try:
-        m = cmds.xform(node, q=True, matrix=True, objectSpace=True)
-        return [float(x) for x in m]
+        return [float(x) for x in cmds.xform(node, q=True, matrix=True, objectSpace=True)]
     except Exception:
         return []
 
 
 def _world_matrix_list(node: str) -> List[float]:
     try:
-        m = cmds.xform(node, q=True, matrix=True, worldSpace=True)
-        return [float(x) for x in m]
+        return [float(x) for x in cmds.xform(node, q=True, matrix=True, worldSpace=True)]
     except Exception:
         return []
-
-
-def _float3_attr(node: str, attr: str, default: Optional[List[float]] = None) -> List[float]:
-    default = default or [0.0, 0.0, 0.0]
-    try:
-        value = cmds.getAttr(node + "." + attr)
-        if isinstance(value, list) or isinstance(value, tuple):
-            if len(value) > 0 and isinstance(value[0], (list, tuple)):
-                return [float(value[0][0]), float(value[0][1]), float(value[0][2])]
-            if len(value) >= 3:
-                return [float(value[0]), float(value[1]), float(value[2])]
-    except Exception:
-        pass
-    return default
 
 
 def _collect_nodes() -> List[Dict[str, Any]]:
@@ -118,9 +123,8 @@ def _collect_nodes() -> List[Dict[str, Any]]:
 def _collect_transforms() -> List[Dict[str, Any]]:
     output = []
     for node in sorted(cmds.ls(type="transform", long=True) or []):
-        short = node.split("|")[-1]
         output.append({
-            "name": short,
+            "name": node.split("|")[-1],
             "path": node,
             "parentPath": _parent_path(node),
             "uuid": _node_uuid(node),
@@ -165,22 +169,10 @@ def _try_get_face_normal(poly_iter: Any, local_index: int, fallback: Any = None)
 
 
 def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
-    """Return duplicated per-corner mesh data suitable for Unity.
-
-    Maya can have per-face-vertex UVs/normals. To avoid losing seams or hard normals,
-    this exporter duplicates vertices per triangle corner. This is heavier than indexed
-    shared-vertex export, but preserves visual fidelity better for a first bridge version.
-    """
-    result = {
-        "vertices": [],
-        "normals": [],
-        "uvs": [],
-        "indices": [],
-    }
+    result = {"vertices": [], "normals": [], "uvs": [], "indices": []}
     dag = _dag_path(shape)
     if dag is None or om is None:
         return result
-
     try:
         fn = om.MFnMesh(dag)
         points = fn.getPoints(om.MSpace.kObject)
@@ -199,17 +191,13 @@ def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
                 face_normal = it.getNormal(om.MSpace.kObject)
             except Exception:
                 face_normal = None
-
-            # Fan triangulation: (0, i, i+1). Maya has already validated polygon order.
             for i in range(1, count - 1):
-                tri_locals = [0, i, i + 1]
-                for local in tri_locals:
+                for local in [0, i, i + 1]:
                     try:
                         vertex_id = it.vertexIndex(local)
                         p = points[vertex_id]
                     except Exception:
                         continue
-
                     nx, ny, nz = _try_get_face_normal(it, local, face_normal)
                     u, v = _try_get_face_uv(it, local)
                     result["vertices"].extend([float(p.x), float(p.y), float(p.z)])
@@ -221,49 +209,52 @@ def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
             it.next()
         except Exception:
             break
-
     return result
+
+
+def _mesh_materials(shape: str) -> List[str]:
+    try:
+        sgs = cmds.listConnections(shape, type="shadingEngine") or []
+        return sorted(set(sgs))
+    except Exception:
+        return []
 
 
 def _collect_meshes() -> List[Dict[str, Any]]:
     meshes = []
     for shape in sorted(cmds.ls(type="mesh", long=True) or []):
-        transform = _parent_path(shape)
         topology = _export_mesh_topology(shape)
         mesh_data: Dict[str, Any] = {
             "name": shape.split("|")[-1],
             "path": shape,
-            "parentPath": transform,
+            "parentPath": _parent_path(shape),
             "uuid": _node_uuid(shape),
-            "vertexCount": 0,
-            "triangleCount": 0,
+            "sourceVertexCount": int(cmds.polyEvaluate(shape, vertex=True) or 0),
+            "sourceTriangleCount": int(cmds.polyEvaluate(shape, triangle=True) or 0),
             "vertices": topology.get("vertices", []),
             "normals": topology.get("normals", []),
             "uvs": topology.get("uvs", []),
             "indices": topology.get("indices", []),
-            "materials": [],
+            "materials": _mesh_materials(shape),
         }
-
-        try:
-            vertex_count = cmds.polyEvaluate(shape, vertex=True) or 0
-            triangle_count = cmds.polyEvaluate(shape, triangle=True) or 0
-            mesh_data["sourceVertexCount"] = int(vertex_count)
-            mesh_data["sourceTriangleCount"] = int(triangle_count)
-        except Exception:
-            mesh_data["sourceVertexCount"] = 0
-            mesh_data["sourceTriangleCount"] = 0
-
         mesh_data["vertexCount"] = len(mesh_data["vertices"]) // 3
         mesh_data["triangleCount"] = len(mesh_data["indices"]) // 3
-
-        try:
-            shading_engines = cmds.listConnections(shape, type="shadingEngine") or []
-            mesh_data["materials"] = sorted(set(shading_engines))
-        except Exception:
-            pass
-
         meshes.append(mesh_data)
     return meshes
+
+
+def _first_connected_file_texture(material: str) -> str:
+    try:
+        nodes = cmds.listHistory(material, future=False, pruneDagObjects=True) or []
+        for n in nodes:
+            try:
+                if cmds.nodeType(n) == "file":
+                    return _safe_get_attr(n + ".fileTextureName", "") or _safe_get_attr(n + ".ftn", "") or ""
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return ""
 
 
 def _collect_materials() -> List[Dict[str, Any]]:
@@ -279,8 +270,9 @@ def _collect_materials() -> List[Dict[str, Any]]:
                 "name": node,
                 "type": cmds.nodeType(node),
                 "uuid": _node_uuid(node),
-                "color": _safe_get_attr(node + ".color", None),
-                "transparency": _safe_get_attr(node + ".transparency", None),
+                "color": _float3_attr(node, "color", [1.0, 1.0, 1.0]),
+                "transparency": _float3_attr(node, "transparency", [0.0, 0.0, 0.0]),
+                "diffuseTexture": _first_connected_file_texture(node),
             })
     return sorted(mats, key=lambda x: x["name"])
 
@@ -306,9 +298,11 @@ def _collect_cameras() -> List[Dict[str, Any]]:
             "path": shape,
             "parentPath": _parent_path(shape),
             "uuid": _node_uuid(shape),
-            "focalLength": _safe_get_attr(shape + ".focalLength", 35.0),
-            "nearClipPlane": _safe_get_attr(shape + ".nearClipPlane", 0.1),
-            "farClipPlane": _safe_get_attr(shape + ".farClipPlane", 1000.0),
+            "focalLength": _float_attr(shape, "focalLength", 35.0),
+            "horizontalFilmAperture": _float_attr(shape, "horizontalFilmAperture", 1.417),
+            "verticalFilmAperture": _float_attr(shape, "verticalFilmAperture", 0.945),
+            "nearClipPlane": _float_attr(shape, "nearClipPlane", 0.1),
+            "farClipPlane": _float_attr(shape, "farClipPlane", 1000.0),
         })
     return output
 
@@ -324,8 +318,11 @@ def _collect_lights() -> List[Dict[str, Any]]:
                 "parentPath": _parent_path(shape),
                 "type": t,
                 "uuid": _node_uuid(shape),
-                "color": _safe_get_attr(shape + ".color", None),
-                "intensity": _safe_get_attr(shape + ".intensity", 1.0),
+                "color": _float3_attr(shape, "color", [1.0, 1.0, 1.0]),
+                "intensity": _float_attr(shape, "intensity", 1.0),
+                "coneAngle": _float_attr(shape, "coneAngle", 40.0),
+                "penumbraAngle": _float_attr(shape, "penumbraAngle", 0.0),
+                "dropoff": _float_attr(shape, "dropoff", 0.0),
             })
     return output
 
@@ -347,13 +344,54 @@ def _collect_joints() -> List[Dict[str, Any]]:
     return output
 
 
+def _unity_property_from_attr(attr: str) -> str:
+    table = {
+        "translateX": "localPosition.x", "translateY": "localPosition.y", "translateZ": "localPosition.z",
+        "rotateX": "localEulerAnglesRaw.x", "rotateY": "localEulerAnglesRaw.y", "rotateZ": "localEulerAnglesRaw.z",
+        "scaleX": "localScale.x", "scaleY": "localScale.y", "scaleZ": "localScale.z",
+    }
+    return table.get(attr, "")
+
+
+def _collect_animation_curves() -> List[Dict[str, Any]]:
+    curves = []
+    for curve in sorted(cmds.ls(type=["animCurveTL", "animCurveTA", "animCurveTU"]) or []):
+        try:
+            destinations = cmds.listConnections(curve + ".output", plugs=True, destination=True, source=False) or []
+        except Exception:
+            destinations = []
+        if not destinations:
+            continue
+        dst = destinations[0]
+        if "." not in dst:
+            continue
+        target, attr = dst.split(".", 1)
+        unity_prop = _unity_property_from_attr(attr)
+        if not unity_prop:
+            continue
+        try:
+            key_count = cmds.keyframe(curve, q=True, keyframeCount=True) or 0
+            times = cmds.keyframe(curve, q=True, index=(0, key_count - 1), timeChange=True) or []
+            values = cmds.keyframe(curve, q=True, index=(0, key_count - 1), valueChange=True) or []
+        except Exception:
+            times, values = [], []
+        curves.append({
+            "targetPath": _full_path(target),
+            "attribute": attr,
+            "unityProperty": unity_prop,
+            "times": [float(x) for x in times],
+            "values": [float(x) for x in values],
+        })
+    return curves
+
+
 def _collect_unsupported() -> List[Dict[str, Any]]:
     supported = {
         "transform", "joint", "mesh", "camera",
         "ambientLight", "directionalLight", "pointLight", "spotLight", "areaLight",
         "lambert", "phong", "blinn", "surfaceShader", "aiStandardSurface", "standardSurface",
-        "file", "place2dTexture", "shadingEngine",
-        "skinCluster", "blendShape",
+        "file", "place2dTexture", "shadingEngine", "skinCluster", "blendShape",
+        "animCurveTL", "animCurveTA", "animCurveTU",
     }
     unsupported = []
     for node in sorted(cmds.ls() or []):
@@ -362,7 +400,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v2 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v3 support set"})
     return unsupported
 
 
@@ -402,7 +440,7 @@ def build_scene_dict() -> Dict[str, Any]:
         "joints": _collect_joints(),
         "skins": [],
         "blendShapes": [],
-        "animations": [],
+        "animations": _collect_animation_curves(),
         "constraints": [],
         "unsupported": _collect_unsupported(),
     }
