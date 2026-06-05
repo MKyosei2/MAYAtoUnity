@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V10: Unity-side JSON bridge importer + mesh/material/camera/light/animation/skinning/blendshape attachment
+// MAYAIMPORTER_PATCH_V11: Unity-side JSON bridge importer + mesh/material/camera/light/animation/skinning/blendshape attachment with safe renderer conversion
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -125,6 +125,11 @@ namespace MayaImporter.Core
                 if (mesh == null) continue;
 
                 Transform target = MayaUnityJsonRuntimeBuilder.FindTransform(byMayaName, m.path, m.parentPath, m.name, root.transform);
+                if (target == null)
+                {
+                    if (log != null) log.Warn("Could not find target transform for JSON mesh: " + m.name);
+                    continue;
+                }
 
                 bool skinned = MayaUnityJsonRuntimeBuilder.AttachSkinnedMeshIfNeeded(root, target, m, mesh, materials, log);
                 if (skinned)
@@ -163,9 +168,9 @@ namespace MayaImporter.Core
             if (target == null || mesh == null) return;
 
             MeshFilter mf = target.GetComponent<MeshFilter>();
-            if (mf != null) UnityEngine.Object.DestroyImmediate(mf);
+            MayaUnityJsonRuntimeBuilder.DestroyComponentSafe(mf);
             MeshRenderer mr = target.GetComponent<MeshRenderer>();
-            if (mr != null) UnityEngine.Object.DestroyImmediate(mr);
+            MayaUnityJsonRuntimeBuilder.DestroyComponentSafe(mr);
 
             SkinnedMeshRenderer smr = target.GetComponent<SkinnedMeshRenderer>();
             if (smr == null) smr = target.gameObject.AddComponent<SkinnedMeshRenderer>();
