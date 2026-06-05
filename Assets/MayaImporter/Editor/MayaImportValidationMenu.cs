@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V5: Editor validation menu for sample import reports + JSON bridge
+// MAYAIMPORTER_PATCH_V13: Advanced validation menu for sample import reports + JSON bridge
 #if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
@@ -7,14 +7,13 @@ using UnityEngine;
 namespace MayaImporter.Core.EditorTools
 {
     /// <summary>
-    /// Portfolio / QA helper for running deterministic validation imports from the Unity Editor.
-    /// This intentionally lives in an Editor folder and does not affect runtime builds.
+    /// QA/developer validation helpers. The primary user-facing flow is MayaImportWizardWindow.
     /// </summary>
     public static class MayaImportValidationMenu
     {
         private const string SamplesFolder = "Samples";
 
-        [MenuItem("Tools/MAYAtoUnity/Validate All Samples")]
+        [MenuItem("Tools/MAYAtoUnity/Advanced/Validate All Samples", priority = 100)]
         public static void ValidateAllSamples()
         {
             string projectRoot = Directory.GetCurrentDirectory();
@@ -62,7 +61,7 @@ namespace MayaImporter.Core.EditorTools
                 "OK");
         }
 
-        [MenuItem("Tools/MAYAtoUnity/Validate Selected Maya File")]
+        [MenuItem("Tools/MAYAtoUnity/Advanced/Validate Selected Maya File", priority = 101)]
         public static void ValidateSelectedMayaFile()
         {
             Object selected = Selection.activeObject;
@@ -74,7 +73,8 @@ namespace MayaImporter.Core.EditorTools
                 return;
             }
 
-            if (!MayaImporter.TryGetAbsolutePathFromAssetPath(assetPath, out string absolute))
+            string absolute;
+            if (!MayaImporter.TryGetAbsolutePathFromAssetPath(assetPath, out absolute))
             {
                 EditorUtility.DisplayDialog("MAYAtoUnity", "Could not resolve selected Maya file: " + assetPath, "OK");
                 return;
@@ -85,7 +85,7 @@ namespace MayaImporter.Core.EditorTools
             EditorUtility.DisplayDialog("MAYAtoUnity", result ? "Validation succeeded." : "Validation completed with errors. Check the report and console.", "OK");
         }
 
-        [MenuItem("Tools/MAYAtoUnity/Validate Selected Exporter JSON")]
+        [MenuItem("Tools/MAYAtoUnity/Advanced/Validate Selected Exporter JSON", priority = 102)]
         public static void ValidateSelectedExporterJson()
         {
             Object selected = Selection.activeObject;
