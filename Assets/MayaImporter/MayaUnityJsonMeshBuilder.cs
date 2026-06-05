@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V7: Build Unity Mesh assets from Maya exporter JSON topology + skin/blendshape data
+// MAYAIMPORTER_PATCH_V8: Build Unity Mesh assets from Maya exporter JSON topology + submesh/skin/blendshape data
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -42,21 +42,6 @@ namespace MayaImporter.Core
                 vertices.Add(new Vector3(x, y, z));
             }
 
-            var indices = new List<int>(src.indices.Length);
-            if (options != null && options.Conversion == CoordinateConversion.MayaToUnity_MirrorZ)
-            {
-                for (int i = 0; i + 2 < src.indices.Length; i += 3)
-                {
-                    indices.Add(src.indices[i + 0]);
-                    indices.Add(src.indices[i + 2]);
-                    indices.Add(src.indices[i + 1]);
-                }
-            }
-            else
-            {
-                indices.AddRange(src.indices);
-            }
-
             var mesh = new Mesh();
             mesh.name = string.IsNullOrEmpty(src.name) ? "MayaMesh" : src.name;
 #if UNITY_2017_3_OR_NEWER
@@ -72,7 +57,7 @@ namespace MayaImporter.Core
                 mesh.SetUVs(0, uvs);
             }
 
-            mesh.SetTriangles(indices, 0);
+            SetTrianglesOrSubMeshes(mesh, src, options, log);
 
             if (src.normals != null && src.normals.Length / 3 == vertices.Count)
             {
@@ -98,8 +83,47 @@ namespace MayaImporter.Core
             mesh.RecalculateBounds();
             try { mesh.RecalculateTangents(); } catch { }
 
-            log?.Info("Built Unity Mesh from Maya JSON: " + mesh.name + " vertices=" + vertices.Count + " triangles=" + (indices.Count / 3));
+            log?.Info("Built Unity Mesh from Maya JSON: " + mesh.name + " vertices=" + vertices.Count + " triangles=" + (src.indices.Length / 3) + " subMeshes=" + mesh.subMeshCount);
             return mesh;
+        }
+
+        private static void SetTrianglesOrSubMeshes(Mesh mesh, MayaUnityExportMesh src, MayaImportOptions options, MayaImportLog log)
+        {
+            if (src.subMeshes != null && src.subMeshes.Length > 0)
+            {
+                mesh.subMeshCount = src.subMeshes.Length;
+                for (int s = 0; s < src.subMeshes.Length; s++)
+                {
+                    int[] raw = src.subMeshes[s] != null ? src.subMeshes[s].indices : null;
+                    var indices = BuildTriangleIndexList(raw, options);
+                    mesh.SetTriangles(indices, s);
+                }
+                log?.Info("Applied submeshes: " + src.name + " count=" + src.subMeshes.Length);
+                return;
+            }
+
+            mesh.SetTriangles(BuildTriangleIndexList(src.indices, options), 0);
+        }
+
+        private static List<int> BuildTriangleIndexList(int[] raw, MayaImportOptions options)
+        {
+            var indices = new List<int>(raw != null ? raw.Length : 0);
+            if (raw == null) return indices;
+
+            if (options != null && options.Conversion == CoordinateConversion.MayaToUnity_MirrorZ)
+            {
+                for (int i = 0; i + 2 < raw.Length; i += 3)
+                {
+                    indices.Add(raw[i + 0]);
+                    indices.Add(raw[i + 2]);
+                    indices.Add(raw[i + 1]);
+                }
+            }
+            else
+            {
+                indices.AddRange(raw);
+            }
+            return indices;
         }
 
         private static void ApplyBoneWeights(Mesh mesh, MayaUnityExportMesh src, int vertexCount, MayaImportLog log)
@@ -134,12 +158,12 @@ namespace MayaImporter.Core
                 if (bs == null || string.IsNullOrEmpty(bs.name) || bs.deltaVertices == null || bs.deltaVertices.Length / 3 != vertexCount)
                     continue;
 
-                Vector3[] dv = ToVector3Array(bs.deltaVertices, vertexCount, options, true);
+                Vector3[] dv = ToVector3Array(bs.deltaVertices, vertexCount, options);
                 Vector3[] dn = bs.deltaNormals != null && bs.deltaNormals.Length / 3 == vertexCount
-                    ? ToVector3Array(bs.deltaNormals, vertexCount, options, true)
+                    ? ToVector3Array(bs.deltaNormals, vertexCount, options)
                     : new Vector3[vertexCount];
                 Vector3[] dt = bs.deltaTangents != null && bs.deltaTangents.Length / 3 == vertexCount
-                    ? ToVector3Array(bs.deltaTangents, vertexCount, options, true)
+                    ? ToVector3Array(bs.deltaTangents, vertexCount, options)
                     : new Vector3[vertexCount];
 
                 float weight = bs.weight <= 0f ? 100f : bs.weight;
@@ -149,7 +173,7 @@ namespace MayaImporter.Core
             if (count > 0) log?.Info("Applied blendshapes to mesh: " + mesh.name + " count=" + count);
         }
 
-        private static Vector3[] ToVector3Array(float[] src, int vertexCount, MayaImportOptions options, bool vectorDelta)
+        private static Vector3[] ToVector3Array(float[] src, int vertexCount, MayaImportOptions options)
         {
             var dst = new Vector3[vertexCount];
             for (int i = 0; i < vertexCount; i++)
