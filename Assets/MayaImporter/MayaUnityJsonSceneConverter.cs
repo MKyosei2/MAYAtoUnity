@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V6: Convert Maya exporter JSON DTO to MayaSceneData
+// MAYAIMPORTER_PATCH_V10: Convert Maya exporter JSON DTO to MayaSceneData
 using System;
 using System.Collections.Generic;
 
@@ -34,6 +34,7 @@ namespace MayaImporter.Core
             AddLights(scene, export.lights);
             AddJoints(scene, export.joints);
             AddAnimationCurves(scene, export.animations);
+            AddConstraints(scene, export.constraints);
             AddUnsupported(scene, export.unsupported);
 
             log?.Info("Maya exporter JSON converted. nodes=" + scene.Nodes.Count + " connections=" + scene.Connections.Count);
@@ -93,13 +94,16 @@ namespace MayaImporter.Core
                 AddIntAttr(rec, ".sourceTriangleCount", m.sourceTriangleCount);
                 AddIntAttr(rec, ".exportedVertexFloatCount", m.vertices != null ? m.vertices.Length : 0);
                 AddIntAttr(rec, ".exportedIndexCount", m.indices != null ? m.indices.Length : 0);
+                AddIntAttr(rec, ".subMeshCount", m.subMeshes != null ? m.subMeshes.Length : 0);
+                AddIntAttr(rec, ".blendShapeCount", m.blendShapes != null ? m.blendShapes.Length : 0);
+                AddIntAttr(rec, ".skinJointCount", m.skinJoints != null ? m.skinJoints.Length : 0);
 
                 if (m.materials == null) continue;
                 for (int i = 0; i < m.materials.Length; i++)
                 {
-                    string sg = m.materials[i];
-                    if (string.IsNullOrEmpty(sg)) continue;
-                    scene.Connections.Add(new ConnectionRecord(name + ".instObjGroups[" + i + "]", sg + ".dagSetMembers[" + i + "]"));
+                    string material = m.materials[i];
+                    if (string.IsNullOrEmpty(material)) continue;
+                    scene.Connections.Add(new ConnectionRecord(name + ".instObjGroups[" + i + "]", material + ".dagSetMembers[" + i + "]"));
                 }
             }
         }
@@ -212,6 +216,22 @@ namespace MayaImporter.Core
                 AddStringAttr(rec, ".unityProperty", a.unityProperty);
                 AddFloatArrayAttr(rec, ".times", a.times, "floatArray");
                 AddFloatArrayAttr(rec, ".values", a.values, "floatArray");
+            }
+        }
+
+        private static void AddConstraints(MayaSceneData scene, MayaUnityExportConstraint[] constraints)
+        {
+            if (constraints == null) return;
+            foreach (var c in constraints)
+            {
+                string name = StableName(c.path, c.name);
+                if (string.IsNullOrEmpty(name)) continue;
+                var rec = scene.GetOrCreateNode(name, string.IsNullOrEmpty(c.type) ? "constraint" : c.type);
+                rec.Uuid = c.uuid;
+                rec.ParentName = StableName(c.parentPath, null);
+                rec.Provenance = MayaNodeProvenance.AsciiCommands;
+                rec.ProvenanceDetail = "MayaExporterJson:constraints:bakedToAnimation";
+                AddStringAttr(rec, ".bakeStatus", "bakedToAnimationCurves");
             }
         }
 
