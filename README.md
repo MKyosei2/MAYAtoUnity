@@ -1,101 +1,216 @@
 # MAYAtoUnity
 
-**MAYAtoUnity** は、Maya の `.ma` / `.mb` シーンファイルを Unity 側で解析し、Unity の GameObject 階層・コンポーネント・検証可能な中間データへ再構築するための Importer / DCC Pipeline Tool です。
+**MAYAtoUnity** は、Maya / DCC データを Unity 側で検証・再構築するための **Importer / DCC Pipeline Tool** です。
 
-このプロジェクトの主眼は、単に「Maya ファイルを読み込む」ことではありません。  
-Maya のノード、属性、接続、階層、復元経路を Unity 上で追跡可能な形に変換し、ゲーム開発における **DCC → Unity 連携、アセット検証、インポート自動化、Technical Artist 向けツール開発** の土台を作ることを目的としています。
+このプロジェクトは、単に Maya ファイルを読み込むだけではなく、Maya のノード、属性、接続、階層、Mesh、Material、Animation、Skin、BlendShape、Constraint の変換根拠を Unity 上で追跡可能な形に残すことを重視しています。
 
-> 現在の実装は研究開発・ポートフォリオ向けのカスタム Importer です。  
-> Autodesk Maya / Maya API / FBX SDK には依存せず、Unity 側だけで解析・復元・検証できる構成を目指しています。
-
----
-
-## 1. このツールが解決しようとしている課題
-
-ゲーム制作では、Maya などの DCC ツールで作成したデータを Unity に持ち込む際、通常は FBX や専用エクスポータを利用します。  
-しかし、実際の制作現場では以下のような問題が起こります。
-
-- Maya 側のノード構造や接続情報が Unity 側で見えなくなる
-- Import 後に「なぜこの結果になったのか」を追跡しにくい
-- FBX 変換時に失われる属性や補助情報がある
-- Maya が入っていない環境では検証・自動化が難しい
-- 大量の DCC データを Unity 側で機械的に検査したい
-- Tool / Technical Artist が Maya データの中身を Unity 側で確認したい
-
-MAYAtoUnity は、こうした問題に対して **「変換結果だけでなく、変換根拠も保持する」** ことを重視した Importer です。
+> このリポジトリには 2 つの経路があります。  
+> 1. Unity-only `.ma/.mb` preservation / recovery importer  
+> 2. Maya 上で実行する exporter から JSON を出し、Unity で高精度に再構築する JSON Bridge
 
 ---
 
-## 2. コンセプト
+## What this project demonstrates
 
-### Preservation-first importer
+MAYAtoUnity は、ゲーム開発における DCC → Engine 連携を想定した Technical Artist / Tools Programmer 向けのポートフォリオ作品です。
 
-MAYAtoUnity は、完全に再現できない情報を無理に捨てたり、曖昧に変換したりするのではなく、まず元データを可能な限り保持します。
+示せる技術要素:
 
-- Maya ノード名
-- Maya ノードタイプ
-- 親子関係
-- UUID
-- Raw attributes
-- Raw connection plugs
-- `.mb` 解析時の復元経路
-- Raw binary / raw ascii source evidence
-
-これにより、未対応ノードであっても Unity Inspector 上で「何が存在していたか」を確認できます。
-
-### Deterministic reconstruction
-
-Importer の出力は、同じ入力に対してなるべく同じ順序・同じ構造になるように設計しています。
-
-- ノード名による決定的ソート
-- ステージ別の `ApplyToUnity`
-- NodeType ごとの優先順位付け
-- `.mb` 復元経路の provenance 管理
-
-これは、差分確認、テスト、デバッグ、ポートフォリオとしての説明性を高めるための設計です。
-
-### Unity-only pipeline
-
-このリポジトリの大きな制約・特徴は、Maya API に依存しないことです。
-
-- Maya を起動しない
-- Autodesk API を呼ばない
-- Unity C# 側でパース・データ化・再構築する
-
-そのため、完全な Maya 互換 Importer ではありませんが、Unity 側で DCC データを解析する Tool Engineering の題材として成立する構成になっています。
+- Unity Editor tooling
+- DCC pipeline engineering
+- Scene graph reconstruction
+- Intermediate data model design
+- Mesh topology import
+- SubMesh / face material assignment
+- Material / texture binding
+- Camera / Light reconstruction
+- AnimationCurve generation
+- Constraint baking
+- Skin weight / bindpose import
+- BlendShape delta import
+- Import report / validation workflow
+- Maya Binary best-effort recovery
+- Fallback / graceful degradation design
 
 ---
 
-## 3. 全体アーキテクチャ
+## Pipeline overview
 
 ```text
-.ma / .mb file
+Maya scene
   ↓
-MayaImporter.Parse
+Tools/MayaExporter/maya_to_unity_exporter.py
   ↓
-+----------------------+----------------------+
-| .ma path             | .mb path             |
-| MayaAsciiParser      | MayaBinaryParser     |
-+----------------------+----------------------+
+Exporter JSON schema v9
+  ↓
+MayaUnityJsonImporter
   ↓
 MayaSceneData
-  ↓
-NodeRecord / ConnectionRecord / RawAttributeValue
   ↓
 UnitySceneBuilder
   ↓
 GameObject hierarchy
   ↓
-MayaNodeComponentBase-derived components
+Runtime attachment layer
   ↓
-RuntimeAutoFix / RuntimeAutoBind
+Mesh / SubMesh / Material / Camera / Light / Animation / Skin / BlendShape
+  ↓
+Import Report + Validation
 ```
 
 ---
 
-## 4. Main entry point
+## Current JSON Bridge support
 
-メインの入口は `MayaImporter` です。
+| Area | Status | Notes |
+|---|---:|---|
+| Transform hierarchy | Implemented | Maya path / parent path から Unity hierarchy を構築 |
+| Mesh topology | Implemented | vertices / normals / uvs / triangle indices をJSON経由で再構築 |
+| SubMesh | Implemented | Maya face material assignment を Unity subMesh に変換 |
+| Material color | Implemented | lambert / phong / blinn / standardSurface などから基本色を反映 |
+| Texture binding | Implemented | file texture path を Unity Material の `_BaseMap` / `_MainTex` へ割り当て |
+| Camera | Implemented | focal length / clipping plane / film aperture metadata を保持 |
+| Light | Implemented | directional / point / spot / area light metadata を保持・反映 |
+| Native animation curves | Implemented | translate / rotate / scale animCurve を Unity AnimationClip 化 |
+| Constraint baking | Implemented | parent / point / orient / scale / aim constraint の評価結果を Transform animation にbake |
+| Joints | Implemented | joint hierarchy / jointOrient / matrix metadata を保持 |
+| Skin weights | Implemented | top 4 weights per exported vertex を Unity BoneWeight に変換 |
+| Bindposes | Implemented | skinCluster.bindPreMatrix を優先し、失敗時は joint inverse matrix fallback |
+| SkinnedMeshRenderer | Implemented | skin情報ありmeshを SkinnedMeshRenderer として構築 |
+| BlendShape delta vertices | Implemented | Maya上でtarget差分をサンプリングし Unity blendshape frame に変換 |
+| Current BlendShape weight | Implemented | Maya current weight を SkinnedMeshRenderer.SetBlendShapeWeight に反映 |
+| Constraint metadata | Implemented | constraint node と bake status を MayaSceneData に記録 |
+| Import report | Implemented | source evidence / coverage / unsupported / log をMarkdown出力 |
+| Validation menu | Implemented | `.ma` / `.mb` / exporter `.json` sample をEditor menuから検証 |
+
+---
+
+## Unity-only `.ma/.mb` preservation path
+
+MAYAtoUnity には、Maya API を使わず Unity 側だけで `.ma/.mb` を解析・保持する経路もあります。
+
+### `.ma` path
+
+```text
+.ma file
+  ↓
+MayaAsciiParser
+  ↓
+createNode / setAttr / connectAttr / parent / currentUnit ...
+  ↓
+MayaSceneData
+  ↓
+UnitySceneBuilder
+```
+
+`.ma` path では、Maya ASCII command を実行せず、構造化データとして保持します。
+
+保持対象の例:
+
+- node name / node type
+- parent hierarchy
+- UUID
+- raw attributes
+- typed parsed attributes
+- plug connections
+- raw command statements
+- unit information
+
+### `.mb` path
+
+`.mb` は Maya Binary 形式のため、完全互換 parser ではなく preservation-first / best-effort recovery として扱います。
+
+```text
+.mb bytes
+  ↓
+Raw binary preservation + SHA-256
+  ↓
+IFF-like chunk index
+  ↓
+Embedded ASCII extraction
+  ↓
+Null-terminated ASCII reconstruction
+  ↓
+String table / DAG-like path hints
+  ↓
+Deterministic node enumeration
+  ↓
+Chunk placeholder fallback
+```
+
+`.mb` recovery では、復元根拠を `MayaNodeProvenance` として記録します。
+
+| Provenance | Meaning |
+|---|---|
+| `AsciiCommands` | `.ma` command / exporter JSON由来 |
+| `MbEmbeddedAscii` | `.mb` 内 command-like text 由来 |
+| `MbNullTerminatedAscii` | null-terminated string から復元 |
+| `MbDeterministicStringTable` | string table 由来の決定的列挙 |
+| `MbChunkPlaceholder` | chunk index 由来のplaceholder |
+| `MbHeuristic` | heuristic reconstruction |
+
+---
+
+## Key implementation files
+
+```text
+Assets/MayaImporter/
+  MayaImporter.cs
+  MayaImportOptions.cs
+  MayaImportReport.cs
+  MayaUnityJsonImporter.cs
+  MayaUnityJsonModels.cs
+  MayaUnityJsonMeshBuilder.cs
+  MayaUnityJsonRuntimeBuilder.cs
+  MayaUnityJsonSceneConverter.cs
+
+Assets/MayaImporter/Editor/
+  MayaImportValidationMenu.cs
+
+Tools/MayaExporter/
+  maya_to_unity_exporter.py
+
+Samples/
+  SimpleHierarchy.ma
+  MaterialTexture.ma
+  CameraLight.ma
+  TransformAnimation.ma
+  ConstraintSample.ma
+  ExporterJson/SimpleMeshMaterialAnimation.json
+
+Docs/
+  SupportedNodes.md
+  MayaExporterPlan.md
+  ValidationWorkflow.md
+```
+
+---
+
+## How to validate
+
+Unity Editor menu:
+
+```text
+Tools/MAYAtoUnity/Validate All Samples
+```
+
+or select an exporter JSON file such as:
+
+```text
+Samples/ExporterJson/SimpleMeshMaterialAnimation.json
+```
+
+then run:
+
+```text
+Tools/MAYAtoUnity/Validate Selected Exporter JSON
+```
+
+The validation path imports the file, builds Unity objects, writes an import report, and logs node / connection counts.
+
+---
+
+## Example: programmatic import
 
 ```csharp
 using MayaImporter.Core;
@@ -103,7 +218,39 @@ using UnityEngine;
 
 public class MayaImportExample : MonoBehaviour
 {
-    public string mayaFilePath;
+    public string filePath;
+
+    private void Start()
+    {
+        var options = new MayaImportOptions();
+        options.GenerateImportReport = true;
+
+        MayaSceneData scene;
+        MayaImportLog log;
+
+        GameObject root = MayaImporter.ImportIntoScene(
+            filePath,
+            options,
+            out scene,
+            out log
+        );
+
+        Debug.Log("Imported root: " + root.name);
+        Debug.Log("Node count: " + scene.Nodes.Count);
+        Debug.Log("Connection count: " + scene.Connections.Count);
+    }
+}
+```
+
+For exporter JSON:
+
+```csharp
+using MayaImporter.Core;
+using UnityEngine;
+
+public class MayaJsonImportExample : MonoBehaviour
+{
+    public string jsonPath;
 
     private void Start()
     {
@@ -112,495 +259,102 @@ public class MayaImportExample : MonoBehaviour
         MayaSceneData scene;
         MayaImportLog log;
 
-        GameObject root = MayaImporter.ImportIntoScene(
-            mayaFilePath,
+        GameObject root = MayaUnityJsonImporter.ImportJsonIntoScene(
+            jsonPath,
             options,
             out scene,
             out log
         );
 
-        Debug.Log($"Imported root: {root.name}");
-        Debug.Log($"Node count: {scene.Nodes.Count}");
-        Debug.Log($"Connection count: {scene.Connections.Count}");
+        Debug.Log("Imported JSON root: " + root.name);
     }
 }
 ```
 
-`ImportIntoScene` は以下を行います。
+---
 
-1. ファイル拡張子を確認する
-2. `.ma` なら `MayaAsciiParser` を使う
-3. `.mb` なら `MayaBinaryParser` を使う
-4. `MayaSceneData` を生成する
-5. `UnitySceneBuilder` で Unity Hierarchy を構築する
-6. ImportLog を返す
+## Design policy
+
+### Preservation first
+
+未対応ノードや完全変換できない情報を捨てず、MayaSceneData / NodeRecord / RawAttributeValue / ConnectionRecord として保持します。
+
+### Deterministic reconstruction
+
+同じ入力に対してなるべく同じ出力になるよう、node order、reconstruction stage、fallback を明示しています。
+
+### Baked behavior where appropriate
+
+Constraint のような Maya runtime solver を Unity 側で完全再実装するのではなく、Maya 側で評価した結果を AnimationCurve として bake します。
+
+### Honest limitations
+
+このツールは Unity 公式 FBX workflow や Maya 本体の完全代替ではありません。  
+特に `.mb` の完全解読、Arnold / plugin shader network、全deformer、全constraint solver、全animation tangentの完全互換は保証しません。
 
 ---
 
-## 5. Data model
-
-### MayaSceneData
-
-`MayaSceneData` は Importer の中心となる中間表現です。
-
-主な保持内容:
-
-| Data | Purpose |
-|---|---|
-| `SourcePath` | 元ファイルパス |
-| `SourceKind` | `.ma` / `.mb` / unknown の識別 |
-| `RawAsciiText` | `.ma` 由来の元テキスト |
-| `RawBinaryBytes` | `.mb` 由来の元バイナリ |
-| `RawSha256` | 元データの検証用ハッシュ |
-| `SceneUnits` | Maya の unit 情報 |
-| `Nodes` | Maya ノード一覧 |
-| `Connections` | plug 接続一覧 |
-| `RawStatements` | デバッグ用 raw command |
-| `MbIndex` | `.mb` の chunk / string table 解析補助 |
-| `MbStringTable` | `.mb` から抽出した文字列情報 |
-| `MbMeshHints` | `.mb` 由来の mesh hint |
-
-### NodeRecord
-
-`NodeRecord` は Maya ノード 1 つを表すデータです。
-
-| Field | Meaning |
-|---|---|
-| `Name` | Maya node name |
-| `NodeType` | Maya node type |
-| `ParentName` | Parent node name |
-| `Uuid` | Maya UUID |
-| `Provenance` | どの経路で復元されたか |
-| `Attributes` | setAttr などで取得した属性 |
-| `SetAttrStatements` | デバッグ用 setAttr statement |
-
-### ConnectionRecord
-
-`ConnectionRecord` は Maya の `connectAttr` に相当する接続を保持します。
-
-| Field | Meaning |
-|---|---|
-| `SrcPlug` | 接続元 plug |
-| `DstPlug` | 接続先 plug |
-| `Force` | force 接続かどうか |
-
-### RawAttributeValue
-
-Maya の属性値は、まず raw token として保存し、可能な場合だけ型付き値へ変換します。
-
-対応している typed value の例:
-
-- bool
-- int
-- float
-- Vector2
-- Vector3
-- Vector4
-- Matrix4x4
-- int array
-- float array
-- string array
-
----
-
-## 6. `.ma` parsing
-
-`.ma` は Maya ASCII の command 形式を解析します。
-
-主な対応 command:
-
-| Command | Purpose |
-|---|---|
-| `createNode` | NodeRecord の生成 |
-| `setAttr` | RawAttributeValue の記録 |
-| `connectAttr` | ConnectionRecord の生成 |
-| `parent` | 親子関係の記録 |
-| `currentUnit` | Scene unit の記録 |
-| `rename` | Node 名変更への対応 |
-| `fileInfo` | File metadata の記録 |
-| `requires` | Maya plugin / requirement 情報 |
-| `workspace` | Workspace rule 情報 |
-| `namespace` | Namespace operation 情報 |
-| `addAttr` | Dynamic attribute 情報 |
-| `deleteAttr` | Attribute 削除情報 |
-| `lockNode` | Node lock 情報 |
-| `select` | Selection command 記録 |
-| `setKeyframe` | Animation command 記録 |
-| `setDrivenKeyframe` | Driven key command 記録 |
-| `animLayer` | Animation layer command 記録 |
-| `expression` | Expression command 記録 |
-| `scriptNode` | Script node command 記録 |
-
-### `.ma` parser の設計意図
-
-- Maya command を完全実行するのではなく、Unity 側で構造化データへ変換する
-- 解析できる値は型付きにする
-- 解析できない値も raw token として残す
-- Import 後に Inspector / DebugLog / Report で確認できるようにする
-
----
-
-## 7. `.mb` binary recovery
-
-`.mb` は Maya Binary 形式であり、`.ma` のように単純な command text として読めません。  
-MAYAtoUnity では、`.mb` を完全再現するのではなく、**復元可能な証拠を段階的に拾う best-effort pipeline** として扱います。
-
-### `.mb` pipeline
-
-```text
-Raw .mb bytes
-  ↓
-SetRawBinary + SHA-256
-  ↓
-IFF-like chunk index
-  ↓
-String table decode
-  ↓
-Deterministic node enumeration
-  ↓
-Embedded ASCII extraction
-  ↓
-Null-terminated ASCII reconstruction
-  ↓
-Shading / texture hint tagging
-  ↓
-Mesh topology hint extraction
-  ↓
-Heuristic graph rebuild
-  ↓
-Structured rebuild / TRS rebuild / DAG post process
-  ↓
-Chunk placeholder fallback
-```
-
-### Provenance tracking
-
-`.mb` から復元したノードは、復元経路を `MayaNodeProvenance` として保持します。
-
-| Provenance | Meaning |
-|---|---|
-| `AsciiCommands` | `.ma` command 由来 |
-| `MbEmbeddedAscii` | `.mb` 内の command-like text 由来 |
-| `MbNullTerminatedAscii` | null-terminated string から復元 |
-| `MbDeterministicStringTable` | string table から決定的に列挙 |
-| `MbChunkPlaceholder` | chunk index 由来の placeholder |
-| `MbHeuristic` | heuristic reconstruction |
-
-これにより、復元できたノードについて「確実に読めたもの」と「推定で作ったもの」を区別できます。
-
-### `.mb` support policy
-
-この Importer は `.mb` を完全互換で読み込むことを目的としていません。  
-代わりに、以下を重視しています。
-
-- 元バイナリを保持する
-- 復元根拠を明示する
-- 失敗時も空の結果ではなく inspectable な placeholder を残す
-- 復元経路をログ・データに残す
-- 将来の decoder 拡張に耐える中間構造を作る
-
----
-
-## 8. Unity reconstruction
-
-`UnitySceneBuilder` は `MayaSceneData` から Unity Hierarchy を構築します。
-
-### Build steps
-
-1. `scene.Nodes` を deterministic order で並べる
-2. 各 `NodeRecord` に対応する GameObject を生成する
-3. `NodeFactory` 経由で node type に対応する Component を付与する
-4. `MayaNodeComponentBase.InitializeFromRecord` で raw attributes / connections を注入する
-5. ParentName に基づいて Transform hierarchy を復元する
-6. Stage priority に基づいて `ApplyToUnity` を呼ぶ
-7. Material post process を実行する
-8. Runtime settings / optional player component を付与する
-
-### Stage priority
-
-ノードの適用順序は、Unity 側の依存関係を考慮して段階分けしています。
-
-| Priority | Node examples |
-|---:|---|
-| 0 | transform, joint |
-| 10 | camera, light |
-| 20 | mesh, nurbsCurve, nurbsSurface |
-| 30 | blendShape, skinCluster |
-| 40 | constraint, IK, motionPath |
-| 50 | shader / texture-like nodes |
-| 60 | shadingEngine |
-| 70 | animCurve / animation nodes |
-| 800 | other nodes |
-
-この設計により、Transform や Mesh などの基礎構造を先に構築し、その後に deformer / constraint / material / animation を適用できます。
-
----
-
-## 9. Node components
-
-各 Maya node は Unity 上では `MayaNodeComponentBase` 派生 Component として表現されます。
-
-共通で保持する情報:
-
-- `NodeName`
-- `NodeType`
-- `ParentName`
-- `Uuid`
-- `Attributes`
-- `Connections`
-
-### Generic node support
-
-未対応 node type についても、完全に捨てるのではなく Generic / Unknown component として保持します。
-
-Generic node では:
-
-- 属性数
-- 接続数
-- 型付き属性 summary
-- Inspector 向け preview
-
-を表示できるようにし、将来的な node-specific 実装に繋げられる構成にしています。
-
----
-
-## 10. RuntimeAutoFix / RuntimeAutoBind
-
-Import 直後だけでなく、Prefab として保存したあとに scene load された場合も壊れにくくするため、runtime 補助処理を用意しています。
-
-### RuntimeAutoFix
-
-目的:
-
-- Missing component の補完
-- Constraint 系 component の補助追加
-- BlendShape / SkinCluster 周辺の接続補助
-- Parent consistency の補正
-
-### RuntimeAutoBind
-
-目的:
-
-- Constraint target の再バインド
-- Deformer / mesh 的な接続の補助
-- BlendShape が存在する mesh の検出
-
-これらは完全な Maya runtime simulation ではなく、imported prefab を Unity 上で扱いやすくするための repair layer です。
-
----
-
-## 11. Import options
-
-`MayaImportOptions` で挙動を切り替えます。
-
-| Option | Purpose |
-|---|---|
-| `KeepRawStatements` | raw command を保持する |
-| `RawStatementsMaxEntries` | raw command 保持数の上限 |
-| `SetAttrStatementsMaxPerNode` | node ごとの setAttr 保存上限 |
-| `CreateRootGameObject` | root GameObject を作成する |
-| `Conversion` | Maya → Unity 座標変換方式 |
-| `CreateUnityComponents` | Unity Component の生成を有効化 |
-| `SaveAssets` | Editor 側で asset 保存を行う |
-| `OutputFolder` | 保存先 folder |
-| `SaveMeshes` | mesh asset を保存する |
-| `SaveMaterials` | material asset を保存する |
-| `SaveTextures` | texture asset を保存する |
-| `SaveAnimationClip` | AnimationClip 保存 path を使う |
-| `SavePrefab` | prefab として保存する |
-| `KeepImportedRootInScene` | import 後の scene instance を残す |
-| `AttachDecodedAttributeSummary` | Inspector 向け summary を付与する |
-| `MbTryExtractEmbeddedAscii` | `.mb` 内 command-like text を抽出する |
-| `MbTryExtractNullTerminatedAscii` | null-terminated string から command を復元する |
-| `MbDeterministicEnumerateNodes` | `.mb` string table から node を列挙する |
-| `MbCreateChunkPlaceholderNodes` | 最後の fallback として chunk placeholder を作る |
-
----
-
-## 12. Current implementation status
-
-| Area | Status | Notes |
-|---|---:|---|
-| `.ma` command parsing | Implemented | 主要 command を構造化データとして保持 |
-| `.mb` raw preservation | Implemented | Raw bytes と SHA-256 を保持 |
-| `.mb` embedded text recovery | Implemented / best-effort | confidence score と statement 数で判断 |
-| `.mb` string table hints | Implemented / best-effort | node enumeration や texture hint に利用 |
-| Node identity storage | Implemented | name/type/parent/uuid を保持 |
-| Raw attributes | Implemented | token と typed parsed value を保持 |
-| Connections | Implemented | src/dst plug を保持 |
-| Unity hierarchy build | Implemented | deterministic order で GameObject 化 |
-| Generic node fallback | Implemented | 未対応 node も inspectable に保持 |
-| Material reconstruction | Partial | Maya shader 完全互換ではない |
-| Mesh reconstruction | Partial | source data と対応 node に依存 |
-| Rig / skin / deformer | Partial | runtime repair と node storage 中心 |
-| Animation | Experimental | command record / optional clip path は存在 |
-| Production validation | In progress | sample / test / benchmark の追加が必要 |
-
----
-
-## 13. Limitations
-
-このプロジェクトは、Maya や Unity の公式 FBX workflow を置き換えるものではありません。
-
-現在の主な制限:
+## Current limitations
 
 - `.mb` は完全互換 parser ではなく best-effort recovery
-- Maya の全 node type を Unity 上で完全再現するわけではない
-- Material / Shader の見た目完全一致は保証しない
-- Deformer / Rig / Constraint / Animation の完全な Maya runtime 再現は未対応
-- 実運用には多数の real asset による validation が必要
-- Editor UI、import report、automated test はさらに整備が必要
-
-ただし、これらの制限を隠さず、raw data / provenance / generic node として残す設計にしています。
-
----
-
-## 14. Verification plan
-
-今後、README や portfolio 上で説得力を高めるために、以下の検証を追加予定です。
-
-### Import report
-
-Import 後に以下を出力する report を追加する。
-
-- source file path
-- source hash
-- node count
-- connection count
-- node type breakdown
-- `.mb` provenance breakdown
-- unsupported node list
-- warning / error count
-
-### Golden sample tests
-
-小さな `.ma` sample を用意し、以下を自動検証する。
-
-- createNode 数
-- parent hierarchy
-- setAttr parse 結果
-- connection count
-- unit 情報
-- transform attribute
-
-### Visual comparison
-
-Maya 側 screenshot と Unity import result を並べて掲載する。
-
-- hierarchy comparison
-- material comparison
-- mesh / object count comparison
-- import log screenshot
+- Material / Shader の完全見た目一致は未保証
+- Complex rig / deformer / reference / namespace は追加検証が必要
+- BlendShape は deltaVertices 中心で、deltaNormals / deltaTangents は今後強化予定
+- Constraint は solver再実装ではなく Transform animation bake
+- Animation tangent / interpolation の完全再現は今後対応予定
+- Unity実機compile / runtime validation は継続的に拡張予定
 
 ---
 
-## 15. Recommended repository additions
-
-ポートフォリオとしてさらに強く見せるため、以下の追加を推奨します。
-
-```text
-Docs/
-  Architecture.md
-  MbRecoveryPipeline.md
-  SupportedNodes.md
-  ImportReportSample.md
-
-Samples/
-  SimpleHierarchy.ma
-  MaterialSample.ma
-  ConstraintSample.ma
-  BinaryRecoverySample.mb
-
-Screenshots/
-  maya_hierarchy.png
-  unity_import_result.png
-  inspector_node_summary.png
-
-Tests/
-  ParserTests.cs
-  SceneBuilderTests.cs
-  MbRecoveryTests.cs
-```
-
----
-
-## 16. Roadmap
+## Roadmap
 
 ### Short term
 
-- README に screenshot / GIF を追加
-- sample `.ma` を追加
-- import report 出力を追加
-- 対応 node type 一覧を追加
-- parser unit test を追加
+- Unity compile verification
+- More exporter JSON golden samples
+- README screenshots / GIF
+- Import report sample追加
+- Animation tangent / interpolation metadata対応
 
 ### Mid term
 
-- Unity Editor import window を追加
-- `.ma` parser の test coverage を拡大
-- material reconstruction の精度改善
-- mesh / transform / connection の validation tool を追加
-- unsupported node report を整備
+- Namespace / reference support
+- Texture copy/import pipeline
+- More rig / skin validation samples
+- Automated editor tests
+- CI regression checks
 
 ### Long term
 
-- project-wide batch import
-- CI 上で parser regression test
+- Batch import UI
+- Project-wide DCC validation
 - AssetUtility との連携
-- import result の optimization / validation pipeline 化
 - DCC pipeline toolset として統合
 
 ---
 
-## 17. Portfolio / technical appeal points
+## Portfolio wording
 
-このプロジェクトで示せる技術要素:
+採用資料では、以下のように説明できます。
 
-- Unity Editor / Runtime tooling
-- DCC pipeline engineering
-- Parser implementation
-- Scene graph reconstruction
-- Intermediate data model design
-- Raw data preservation
-- Deterministic import pipeline
-- Best-effort binary recovery
-- Fallback / graceful degradation design
-- Inspector-friendly debugging
-- Technical Artist / Tools Programmer 向けの問題解決力
+> Maya / DCC データを Unity に取り込むための Importer / Pipeline Tool を開発しました。Maya側Exporterから出力したJSONをUnityで読み込み、Hierarchy、Mesh topology、SubMesh、Material、Texture、Camera、Light、Animation、Skin、BindPose、BlendShape、Constraint bakeを再構築します。加えて、`.ma/.mb` のUnity-only preservation pathも実装し、復元根拠を Import Report と SceneData に残すことで、Technical Artist / Tools Programmer 向けの検証可能なDCC連携ツールとして設計しました。
 
----
-
-## 18. How to present this project
-
-書類・ポートフォリオでは、以下のように説明できます。
-
-> Maya の `.ma/.mb` ファイルを Unity 側で解析し、Maya API に依存せずにノード・属性・接続・階層を構造化データとして保持し、GameObject 階層へ再構築する Importer を開発しました。  
-> `.mb` については raw binary 保持、embedded ASCII 抽出、null-terminated string 復元、string table 由来の決定的ノード列挙など複数の recovery path を実装し、復元経路を provenance として追跡可能にしました。  
-> 完全再現できない node も generic component として保持し、Inspector 上で属性・接続・復元情報を確認できる preservation-first pipeline として設計しています。
-
----
-
-## 19. Related project
-
-この Importer は、別リポジトリの `AssetUtility` と組み合わせることで、以下のような DCC-to-Unity pipeline として見せることができます。
+避けるべき表現:
 
 ```text
-Maya scene import
-  ↓
-Unity hierarchy reconstruction
-  ↓
-Asset scan
-  ↓
-Texture / material / polygon inspection
-  ↓
-Optimization
-  ↓
-Prefab / scene validation
+Maya完全互換
+Unity公式FBXの代替
+あらゆるMayaシーンを完全再現
+Arnold / plugin shader完全対応
+全rig / all deformer完全再現
 ```
 
----
+推奨表現:
 
-## 20. Disclaimer
-
-This is an independent custom importer project for technical research and portfolio purposes.  
-It is not affiliated with Autodesk, Unity Technologies, or the official Maya / Unity FBX pipeline.
+```text
+Maya / DCC scene data bridge
+Preservation-first Unity importer
+Exporter JSON based deterministic reconstruction
+Validation-oriented DCC pipeline tool
+Constraint baking / Skin / BlendShape aware importer
+```
