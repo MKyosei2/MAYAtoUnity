@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V8: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning
+// MAYAIMPORTER_PATCH_V9: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -169,9 +169,34 @@ namespace MayaImporter.Core
 
             List<Material> assigned = ResolveMaterials(src, materials);
             if (assigned.Count > 0) smr.sharedMaterials = assigned.ToArray();
+            ApplyBlendShapeWeights(smr, src, log);
 
             log?.Info("Attached SkinnedMeshRenderer: " + target.name + " bones=" + bones.Length);
             return true;
+        }
+
+        public static void ApplyBlendShapeWeights(Renderer renderer, MayaUnityExportMesh src, MayaImportLog log)
+        {
+            if (renderer == null || src == null || src.blendShapes == null) return;
+            SkinnedMeshRenderer smr = renderer as SkinnedMeshRenderer;
+            if (smr == null || smr.sharedMesh == null) return;
+            ApplyBlendShapeWeights(smr, src, log);
+        }
+
+        private static void ApplyBlendShapeWeights(SkinnedMeshRenderer smr, MayaUnityExportMesh src, MayaImportLog log)
+        {
+            if (smr == null || smr.sharedMesh == null || src == null || src.blendShapes == null) return;
+            int applied = 0;
+            for (int i = 0; i < src.blendShapes.Length; i++)
+            {
+                var bs = src.blendShapes[i];
+                if (bs == null || string.IsNullOrEmpty(bs.name)) continue;
+                int index = smr.sharedMesh.GetBlendShapeIndex(bs.name);
+                if (index < 0) continue;
+                smr.SetBlendShapeWeight(index, bs.currentWeight);
+                applied++;
+            }
+            if (applied > 0) log?.Info("Applied current blendshape weights: " + applied);
         }
 
         public static void AssignMaterialsToRenderers(GameObject root, MayaUnityExport export, Dictionary<string, Material> materials, MayaImportLog log)
@@ -190,6 +215,7 @@ namespace MayaImporter.Core
                     renderer.sharedMaterials = assigned.ToArray();
                     count++;
                 }
+                ApplyBlendShapeWeights(renderer, mesh, log);
             }
             log?.Info("Assigned Unity Materials to renderers: " + count);
         }
