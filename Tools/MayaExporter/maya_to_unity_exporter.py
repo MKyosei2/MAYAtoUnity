@@ -27,7 +27,7 @@ try:
 except Exception:
     om = None
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 def _require_maya() -> None:
@@ -170,6 +170,16 @@ def _dag_path(shape: str):
         return sel.getDagPath(0)
     except Exception:
         return None
+
+
+def _mesh_points(shape: str) -> List[Any]:
+    dag = _dag_path(shape)
+    if dag is None or om is None:
+        return []
+    try:
+        return list(om.MFnMesh(dag).getPoints(om.MSpace.kObject))
+    except Exception:
+        return []
 
 
 def _try_get_face_uv(poly_iter: Any, local_index: int) -> Tuple[float, float]:
@@ -332,9 +342,6 @@ def _skin_cluster_for_shape(shape: str) -> str:
 
 
 def _bindpose_matrix_for_influence(skin: str, joint: str, influence_order: int) -> List[float]:
-    # Preferred source: skinCluster.bindPreMatrix. This is Maya's stored inverse bind matrix.
-    # In many rigs the logical index matches influence order; if it does not, the fallback below
-    # still gives a deterministic inverse world matrix from the joint transform.
     for candidate in (influence_order,):
         try:
             value = cmds.getAttr(f"{skin}.bindPreMatrix[{candidate}]")
@@ -413,30 +420,132 @@ def _skin_data_for_shape(shape: str, topology: Dict[str, Any]) -> Dict[str, Any]
     }
 
 
-def _blendshape_data_for_shape(shape: str, topology: Dict[str, Any]) -> List[Dict[str, Any]]:
-    output: List[Dict[str, Any]] = []
+def _blendshape_nodes_for_shape(shape: str) -> List[str]:
     try:
         history = cmds.listHistory(shape, pruneDagObjects=True) or []
-        for node in history:
-            if cmds.nodeType(node) != "blendShape":
-                continue
-            aliases = cmds.aliasAttr(node, q=True) or []
-            for i in range(0, len(aliases), 2):
-                alias = aliases[i]
-                weight = 100.0
+        return [node for node in history if cmds.nodeType(node) == "blendShape"]
+    except Exception:
+        return []
+
+
+def _blendshape_aliases(node: str) -> List[str]:
+    aliases: List[str] = []
+    try:
+        raw = cmds.aliasAttr(node, q=True) or []
+        for i in range(0, len(raw), 2):
+            alias = raw[i]
+            if alias:
+                aliases.append(alias)
+    except Exception:
+        pass
+    return aliases
+
+
+def _capture_exported_positions(shape: str, source_indices: List[int]) -> List[Tuple[float, float, float]]:
+    points = _mesh_points(shape)
+    output: List[Tuple[float, float, float]] = []
+    for vertex_id in source_indices:
+        try:
+            p = points[int(vertex_id)]
+            output.append((float(p.x), float(p.y), float(p.z)))
+        except Exception:
+            output.append((0.0, 0.0, 0.0))
+    return output
+
+
+def _force_evaluate() -> None:
+    try:
+        cmds.dgdirty(allPlugs=True)
+    except Exception:
+        pass
+    try:
+        cmds.refresh(force=True)
+    except Exception:
+        pass
+
+
+def _all_blendshape_weight_plugs(nodes: List[str]) -> List[str]:
+    plugs: List[str] = []
+    for node in nodes:
+        for alias in _blendshape_aliases(node):
+            plug = node + "." + alias
+            try:
+                if cmds.objExists(plug):
+                    plugs.append(plug)
+            except Exception:
+                pass
+    return plugs
+
+
+def _blendshape_data_for_shape(shape: str, topology: Dict[str, Any]) -> List[Dict[str, Any]]:
+    output: List[Dict[str, Any]] = []
+    source_indices = topology.get("sourceVertexIndices", []) or []
+    if not source_indices:
+        return output
+
+    nodes = _blendshape_nodes_for_shape(shape)
+    if not nodes:
+        return output
+
+    plugs = _all_blendshape_weight_plugs(nodes)
+    original_weights: Dict[str, float] = {}
+    for plug in plugs:
+        try:
+            original_weights[plug] = float(cmds.getAttr(plug))
+        except Exception:
+            original_weights[plug] = 0.0
+
+    try:
+        for plug in plugs:
+            try:
+                cmds.setAttr(plug, 0.0)
+            except Exception:
+                pass
+        _force_evaluate()
+        neutral = _capture_exported_positions(shape, source_indices)
+
+        for node in nodes:
+            for alias in _blendshape_aliases(node):
+                plug = node + "." + alias
+                if plug not in original_weights:
+                    continue
                 try:
-                    weight = float(cmds.getAttr(node + "." + alias))
+                    for p in plugs:
+                        try:
+                            cmds.setAttr(p, 0.0)
+                        except Exception:
+                            pass
+                    cmds.setAttr(plug, 1.0)
+                    _force_evaluate()
+                    target = _capture_exported_positions(shape, source_indices)
                 except Exception:
-                    pass
+                    target = neutral
+
+                delta_vertices: List[float] = []
+                for i in range(min(len(neutral), len(target))):
+                    delta_vertices.extend([
+                        target[i][0] - neutral[i][0],
+                        target[i][1] - neutral[i][1],
+                        target[i][2] - neutral[i][2],
+                    ])
+
+                current = original_weights.get(plug, 0.0)
                 output.append({
                     "name": alias or node,
-                    "weight": weight,
-                    "deltaVertices": [],
+                    "weight": 100.0,
+                    "currentWeight": float(current) * 100.0,
+                    "deltaVertices": delta_vertices,
                     "deltaNormals": [],
                     "deltaTangents": [],
                 })
-    except Exception:
-        pass
+    finally:
+        for plug, value in original_weights.items():
+            try:
+                cmds.setAttr(plug, value)
+            except Exception:
+                pass
+        _force_evaluate()
+
     return output
 
 
@@ -634,7 +743,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v7 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v8 support set"})
     return unsupported
 
 
