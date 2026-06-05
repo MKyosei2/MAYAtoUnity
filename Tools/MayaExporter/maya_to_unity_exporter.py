@@ -27,7 +27,7 @@ try:
 except Exception:
     om = None
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def _require_maya() -> None:
@@ -101,6 +101,30 @@ def _world_matrix_list(node: str) -> List[float]:
         return [float(x) for x in cmds.xform(node, q=True, matrix=True, worldSpace=True)]
     except Exception:
         return []
+
+
+def _world_inverse_matrix_list(node: str) -> List[float]:
+    try:
+        world = _world_matrix_list(node)
+        if len(world) != 16 or om is None:
+            return []
+        inv = om.MMatrix(world).inverse()
+        return [float(inv[i]) for i in range(16)]
+    except Exception:
+        return []
+
+
+def _flatten_matrix_value(value: Any) -> List[float]:
+    if value is None:
+        return []
+    try:
+        if isinstance(value, (list, tuple)) and len(value) == 1 and isinstance(value[0], (list, tuple)):
+            value = value[0]
+        if isinstance(value, (list, tuple)) and len(value) == 16:
+            return [float(x) for x in value]
+    except Exception:
+        pass
+    return []
 
 
 def _collect_nodes() -> List[Dict[str, Any]]:
@@ -177,8 +201,7 @@ def _export_mesh_topology(shape: str) -> Dict[str, Any]:
     if dag is None or om is None:
         return result
     try:
-        fn = om.MFnMesh(dag)
-        points = fn.getPoints(om.MSpace.kObject)
+        points = om.MFnMesh(dag).getPoints(om.MSpace.kObject)
         it = om.MItMeshPolygon(dag)
     except Exception:
         return result
@@ -308,6 +331,36 @@ def _skin_cluster_for_shape(shape: str) -> str:
     return ""
 
 
+def _bindpose_matrix_for_influence(skin: str, joint: str, influence_order: int) -> List[float]:
+    # Preferred source: skinCluster.bindPreMatrix. This is Maya's stored inverse bind matrix.
+    # In many rigs the logical index matches influence order; if it does not, the fallback below
+    # still gives a deterministic inverse world matrix from the joint transform.
+    for candidate in (influence_order,):
+        try:
+            value = cmds.getAttr(f"{skin}.bindPreMatrix[{candidate}]")
+            flat = _flatten_matrix_value(value)
+            if len(flat) == 16:
+                return flat
+        except Exception:
+            pass
+
+    fallback = _world_inverse_matrix_list(joint)
+    if len(fallback) == 16:
+        return fallback
+
+    return [1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0]
+
+
+def _bindposes_for_skin(skin: str, influences: List[str]) -> List[float]:
+    bindposes: List[float] = []
+    for i, joint in enumerate(influences):
+        bindposes.extend(_bindpose_matrix_for_influence(skin, joint, i))
+    return bindposes
+
+
 def _skin_data_for_shape(shape: str, topology: Dict[str, Any]) -> Dict[str, Any]:
     skin = _skin_cluster_for_shape(shape)
     if not skin:
@@ -356,7 +409,7 @@ def _skin_data_for_shape(shape: str, topology: Dict[str, Any]) -> Dict[str, Any]
         "skinJoints": [_full_path(j) for j in influences],
         "boneIndices": bone_indices,
         "boneWeights": bone_weights,
-        "bindposes": [],
+        "bindposes": _bindposes_for_skin(skin, influences),
     }
 
 
@@ -581,7 +634,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v6 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v7 support set"})
     return unsupported
 
 
