@@ -27,7 +27,7 @@ try:
 except Exception:
     om = None
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def _require_maya() -> None:
@@ -168,8 +168,11 @@ def _try_get_face_normal(poly_iter: Any, local_index: int, fallback: Any = None)
             return 0.0, 1.0, 0.0
 
 
-def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
-    result = {"vertices": [], "normals": [], "uvs": [], "indices": [], "sourceVertexIndices": []}
+def _export_mesh_topology(shape: str) -> Dict[str, Any]:
+    result: Dict[str, Any] = {
+        "vertices": [], "normals": [], "uvs": [], "indices": [],
+        "sourceVertexIndices": [], "triangleFaceIndices": []
+    }
     dag = _dag_path(shape)
     if dag is None or om is None:
         return result
@@ -184,14 +187,17 @@ def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
     while not it.isDone():
         try:
             count = it.polygonVertexCount()
+            face_id = int(it.index())
         except Exception:
             count = 0
+            face_id = -1
         if count >= 3:
             try:
                 face_normal = it.getNormal(om.MSpace.kObject)
             except Exception:
                 face_normal = None
             for i in range(1, count - 1):
+                tri_indices: List[int] = []
                 for local in [0, i, i + 1]:
                     try:
                         vertex_id = int(it.vertexIndex(local))
@@ -205,7 +211,10 @@ def _export_mesh_topology(shape: str) -> Dict[str, List[float]]:
                     result["uvs"].extend([u, v])
                     result["indices"].append(next_index)
                     result["sourceVertexIndices"].append(vertex_id)
+                    tri_indices.append(next_index)
                     next_index += 1
+                if len(tri_indices) == 3:
+                    result["triangleFaceIndices"].append(face_id)
         try:
             it.next()
         except Exception:
@@ -219,6 +228,54 @@ def _mesh_materials(shape: str) -> List[str]:
         return sorted(set(sgs))
     except Exception:
         return []
+
+
+def _face_material_map(shape: str, materials: List[str]) -> Dict[int, str]:
+    face_to_material: Dict[int, str] = {}
+    for sg in materials:
+        try:
+            members = cmds.sets(sg, q=True) or []
+        except Exception:
+            members = []
+        for member in members:
+            try:
+                faces = cmds.ls(member, flatten=True) or []
+            except Exception:
+                faces = []
+            for f in faces:
+                if ".f[" not in f:
+                    continue
+                if not f.startswith(shape) and not f.startswith(shape.split("|")[-1]):
+                    continue
+                try:
+                    inside = f.split(".f[")[-1].split("]")[0]
+                    if ":" in inside:
+                        a, b = inside.split(":", 1)
+                        for idx in range(int(a), int(b) + 1):
+                            face_to_material[idx] = sg
+                    else:
+                        face_to_material[int(inside)] = sg
+                except Exception:
+                    pass
+    return face_to_material
+
+
+def _build_submeshes(topology: Dict[str, Any], materials: List[str], face_materials: Dict[int, str]) -> List[Dict[str, Any]]:
+    if not materials:
+        return []
+    by_material: Dict[str, List[int]] = {m: [] for m in materials}
+    fallback = materials[0]
+    tri_faces = topology.get("triangleFaceIndices", []) or []
+    indices = topology.get("indices", []) or []
+    tri_count = len(indices) // 3
+    for tri in range(tri_count):
+        face = tri_faces[tri] if tri < len(tri_faces) else -1
+        material = face_materials.get(face, fallback)
+        if material not in by_material:
+            by_material[material] = []
+        o = tri * 3
+        by_material[material].extend([indices[o + 0], indices[o + 1], indices[o + 2]])
+    return [{"material": m, "indices": idx} for m, idx in by_material.items() if idx]
 
 
 def _skin_cluster_for_shape(shape: str) -> str:
@@ -285,10 +342,6 @@ def _skin_data_for_shape(shape: str, topology: Dict[str, Any]) -> Dict[str, Any]
 
 
 def _blendshape_data_for_shape(shape: str, topology: Dict[str, Any]) -> List[Dict[str, Any]]:
-    # Full target delta extraction is handled by Unity-side schema and mesh builder, but Maya API
-    # target extraction differs across versions and authoring patterns. For now, export stable
-    # blendShape node names and current weights as reportable metadata; real deltas can be filled
-    # by a later target-sampling pass.
     output: List[Dict[str, Any]] = []
     try:
         history = cmds.listHistory(shape, pruneDagObjects=True) or []
@@ -298,7 +351,6 @@ def _blendshape_data_for_shape(shape: str, topology: Dict[str, Any]) -> List[Dic
             aliases = cmds.aliasAttr(node, q=True) or []
             for i in range(0, len(aliases), 2):
                 alias = aliases[i]
-                plug = aliases[i + 1] if i + 1 < len(aliases) else ""
                 weight = 100.0
                 try:
                     weight = float(cmds.getAttr(node + "." + alias))
@@ -320,6 +372,8 @@ def _collect_meshes() -> List[Dict[str, Any]]:
     meshes = []
     for shape in sorted(cmds.ls(type="mesh", long=True) or []):
         topology = _export_mesh_topology(shape)
+        materials = _mesh_materials(shape)
+        face_materials = _face_material_map(shape, materials)
         skin = _skin_data_for_shape(shape, topology)
         mesh_data: Dict[str, Any] = {
             "name": shape.split("|")[-1],
@@ -333,7 +387,9 @@ def _collect_meshes() -> List[Dict[str, Any]]:
             "uvs": topology.get("uvs", []),
             "indices": topology.get("indices", []),
             "sourceVertexIndices": topology.get("sourceVertexIndices", []),
-            "materials": _mesh_materials(shape),
+            "triangleFaceIndices": topology.get("triangleFaceIndices", []),
+            "materials": materials,
+            "subMeshes": _build_submeshes(topology, materials, face_materials),
             "skinCluster": skin.get("skinCluster", ""),
             "skinJoints": skin.get("skinJoints", []),
             "boneIndices": skin.get("boneIndices", []),
@@ -504,7 +560,7 @@ def _collect_unsupported() -> List[Dict[str, Any]]:
         except Exception:
             t = "unknown"
         if t not in supported:
-            unsupported.append({"name": node, "type": t, "reason": "not in exporter v4 support set"})
+            unsupported.append({"name": node, "type": t, "reason": "not in exporter v5 support set"})
     return unsupported
 
 
