@@ -1,7 +1,11 @@
-// MAYAIMPORTER_PATCH_V7: Runtime builders for JSON bridge material/camera/light/animation/skinning
+// MAYAIMPORTER_PATCH_V8: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace MayaImporter.Core
 {
@@ -19,10 +23,31 @@ namespace MayaImporter.Core
             foreach (var src in export.materials)
             {
                 if (src == null || string.IsNullOrEmpty(src.name)) continue;
-                var mat = shader != null ? new Material(shader) : new Material(Shader.Find("Hidden/InternalErrorShader"));
+                Shader selected = shader != null ? shader : Shader.Find("Hidden/InternalErrorShader");
+                if (selected == null) continue;
+
+                var mat = new Material(selected);
                 mat.name = src.name;
                 Color c = ToColor(src.color, Color.white);
-                try { mat.color = c; } catch { }
+                try
+                {
+                    if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+                    if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
+                    mat.color = c;
+                }
+                catch { }
+
+                Texture2D diffuse = TryLoadTexture(src.diffuseTexture, log);
+                if (diffuse != null)
+                {
+                    try
+                    {
+                        if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", diffuse);
+                        if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", diffuse);
+                    }
+                    catch { }
+                }
+
                 if (!map.ContainsKey(src.name)) map.Add(src.name, mat);
             }
 
@@ -172,20 +197,38 @@ namespace MayaImporter.Core
         public static List<Material> ResolveMaterials(MayaUnityExportMesh mesh, Dictionary<string, Material> materials)
         {
             var assigned = new List<Material>();
-            if (mesh != null && mesh.materials != null && materials != null)
+            if (mesh == null || materials == null) return assigned;
+
+            if (mesh.subMeshes != null && mesh.subMeshes.Length > 0)
+            {
+                foreach (var sub in mesh.subMeshes)
+                {
+                    AppendMaterial(assigned, materials, sub != null ? sub.material : null);
+                }
+            }
+            else if (mesh.materials != null)
             {
                 foreach (string name in mesh.materials)
                 {
-                    if (string.IsNullOrEmpty(name)) continue;
-                    Material m;
-                    if (materials.TryGetValue(name, out m)) assigned.Add(m);
+                    AppendMaterial(assigned, materials, name);
                 }
             }
-            if (assigned.Count == 0 && materials != null && materials.Count > 0)
+
+            if (assigned.Count == 0 && materials.Count > 0)
             {
                 foreach (var kv in materials) { assigned.Add(kv.Value); break; }
             }
             return assigned;
+        }
+
+        private static void AppendMaterial(List<Material> assigned, Dictionary<string, Material> materials, string name)
+        {
+            if (assigned == null || materials == null || string.IsNullOrEmpty(name)) return;
+            Material m;
+            if (materials.TryGetValue(name, out m))
+            {
+                assigned.Add(m);
+            }
         }
 
         public static Dictionary<string, Transform> BuildTransformIndex(GameObject root)
@@ -264,6 +307,60 @@ namespace MayaImporter.Core
                 fallback[i] = bones[i].worldToLocalMatrix * meshTransform.localToWorldMatrix;
             return fallback;
         }
+
+        private static Texture2D TryLoadTexture(string path, MayaImportLog log)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+#if UNITY_EDITOR
+            string assetPath = ToAssetPath(path);
+            if (!string.IsNullOrEmpty(assetPath))
+            {
+                Texture2D assetTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+                if (assetTexture != null)
+                {
+                    log?.Info("Loaded texture asset: " + assetPath);
+                    return assetTexture;
+                }
+            }
+#endif
+
+            try
+            {
+                if (!File.Exists(path)) return null;
+                byte[] bytes = File.ReadAllBytes(path);
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true);
+                if (tex.LoadImage(bytes))
+                {
+                    tex.name = Path.GetFileNameWithoutExtension(path);
+                    log?.Info("Loaded texture from file: " + path);
+                    return tex;
+                }
+            }
+            catch (Exception ex)
+            {
+                log?.Warn("Texture load failed: " + path + " / " + ex.Message);
+            }
+
+            return null;
+        }
+
+#if UNITY_EDITOR
+        private static string ToAssetPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return string.Empty;
+            string normalized = path.Replace('\\', '/');
+            if (normalized.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)) return normalized;
+
+            string projectRoot = Directory.GetCurrentDirectory().Replace('\\', '/').TrimEnd('/');
+            if (normalized.StartsWith(projectRoot + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                string rel = normalized.Substring(projectRoot.Length + 1);
+                if (rel.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)) return rel;
+            }
+            return string.Empty;
+        }
+#endif
 
         private static Color ToColor(float[] values, Color fallback)
         {
