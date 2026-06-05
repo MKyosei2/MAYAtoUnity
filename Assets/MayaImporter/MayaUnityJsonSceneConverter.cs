@@ -85,9 +85,13 @@ namespace MayaImporter.Core
                 rec.Uuid = m.uuid;
                 rec.ParentName = StableName(m.parentPath, null);
                 rec.Provenance = MayaNodeProvenance.AsciiCommands;
-                rec.ProvenanceDetail = "MayaExporterJson:meshes";
+                rec.ProvenanceDetail = MayaUnityJsonMeshBuilder.HasTopology(m) ? "MayaExporterJson:meshes:topology" : "MayaExporterJson:meshes:metadata";
                 AddIntAttr(rec, ".vertexCount", m.vertexCount);
                 AddIntAttr(rec, ".triangleCount", m.triangleCount);
+                AddIntAttr(rec, ".sourceVertexCount", m.sourceVertexCount);
+                AddIntAttr(rec, ".sourceTriangleCount", m.sourceTriangleCount);
+                AddIntAttr(rec, ".exportedVertexFloatCount", m.vertices != null ? m.vertices.Length : 0);
+                AddIntAttr(rec, ".exportedIndexCount", m.indices != null ? m.indices.Length : 0);
 
                 if (m.materials == null) continue;
                 for (int i = 0; i < m.materials.Length; i++)
@@ -208,7 +212,7 @@ namespace MayaImporter.Core
 
         private static string StableName(string path, string name)
         {
-            if (!string.IsNullOrEmpty(path)) return path.Trim().Replace('|', '/').Trim('/');
+            if (!string.IsNullOrEmpty(path)) return path.Trim().Trim('|');
             return string.IsNullOrEmpty(name) ? string.Empty : name.Trim();
         }
 
