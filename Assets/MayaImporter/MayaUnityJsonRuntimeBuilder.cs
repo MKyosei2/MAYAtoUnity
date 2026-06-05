@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V10: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape with API-safe fallbacks
+// MAYAIMPORTER_PATCH_V11: Runtime builders for JSON bridge material/texture/camera/light/animation/skinning/blendshape with API-safe fallbacks
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -181,7 +181,7 @@ namespace MayaImporter.Core
             ApplyBlendShapeWeights(smr, src, log);
         }
 
-        private static void ApplyBlendShapeWeights(SkinnedMeshRenderer smr, MayaUnityExportMesh src, MayaImportLog log)
+        public static void ApplyBlendShapeWeights(SkinnedMeshRenderer smr, MayaUnityExportMesh src, MayaImportLog log)
         {
             if (smr == null || smr.sharedMesh == null || src == null || src.blendShapes == null) return;
             int applied = 0;
@@ -271,10 +271,19 @@ namespace MayaImporter.Core
             foreach (var t in transforms)
             {
                 string path = BuildUnityPathRelativeToRoot(root.transform, t);
-                if (!string.IsNullOrEmpty(path) && !map.ContainsKey(path)) map.Add(path, t);
-                if (!string.IsNullOrEmpty(t.name) && !map.ContainsKey(t.name)) map.Add(t.name, t);
+                AddTransformAlias(map, path, t);
+                if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(root.name)) AddTransformAlias(map, root.name + "|" + path, t);
+                AddTransformAlias(map, t.name, t);
             }
+            AddTransformAlias(map, root.name, root.transform);
             return map;
+        }
+
+        private static void AddTransformAlias(Dictionary<string, Transform> map, string key, Transform transform)
+        {
+            if (map == null || transform == null || string.IsNullOrEmpty(key)) return;
+            string stable = StableName(key, null);
+            if (!string.IsNullOrEmpty(stable) && !map.ContainsKey(stable)) map.Add(stable, transform);
         }
 
         public static Transform FindTransform(Dictionary<string, Transform> index, string path, string parentPath, string name, Transform fallback)
@@ -307,6 +316,12 @@ namespace MayaImporter.Core
             if (string.IsNullOrEmpty(mayaPath)) return string.Empty;
             string s = StableName(mayaPath, null);
             if (string.IsNullOrEmpty(s)) return string.Empty;
+            if (root != null && !string.IsNullOrEmpty(root.name))
+            {
+                if (s == root.name) return string.Empty;
+                string prefix = root.name + "|";
+                if (s.StartsWith(prefix, StringComparison.Ordinal)) s = s.Substring(prefix.Length);
+            }
             return s.Replace('|', '/');
         }
 
