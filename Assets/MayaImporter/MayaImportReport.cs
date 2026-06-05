@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V5: Markdown import report generator for validation / portfolio proof
+// MAYAIMPORTER_PATCH_V11: Markdown import report generator for validation / portfolio proof + JSON Bridge statistics
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,12 +16,12 @@ namespace MayaImporter.Core
     {
         public static string WriteMarkdownReport(MayaSceneData scene, MayaImportOptions options, MayaImportLog log, string importedRootName = null)
         {
-            options ??= new MayaImportOptions();
+            if (options == null) options = new MayaImportOptions();
             string folder = ResolveReportFolder(options.ReportOutputFolder);
             Directory.CreateDirectory(folder);
 
             string baseName = "MayaImportReport";
-            if (!string.IsNullOrEmpty(scene?.SourcePath))
+            if (scene != null && !string.IsNullOrEmpty(scene.SourcePath))
                 baseName = Path.GetFileNameWithoutExtension(scene.SourcePath);
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -43,13 +43,13 @@ namespace MayaImporter.Core
             catch { }
 #endif
 
-            log?.Info("Import report written: " + path);
+            if (log != null) log.Info("Import report written: " + path);
             return path;
         }
 
         public static string BuildMarkdown(MayaSceneData scene, MayaImportOptions options, MayaImportLog log, string importedRootName = null)
         {
-            options ??= new MayaImportOptions();
+            if (options == null) options = new MayaImportOptions();
             var sb = new StringBuilder(64 * 1024);
 
             sb.AppendLine("# MAYAtoUnity Import Report");
@@ -61,6 +61,7 @@ namespace MayaImporter.Core
 
             AppendSummary(sb, scene, log, importedRootName);
             AppendSourceEvidence(sb, scene);
+            AppendJsonBridgeOverview(sb, scene);
             AppendCoverage(sb, scene);
             if (options.ReportNodeTypeBreakdown) AppendNodeTypeBreakdown(sb, scene, options.ReportNodeTypeMaxEntries);
             if (options.ReportProvenanceBreakdown) AppendProvenanceBreakdown(sb, scene);
@@ -79,15 +80,16 @@ namespace MayaImporter.Core
             sb.AppendLine();
             sb.AppendLine("| Item | Value |");
             sb.AppendLine("|---|---|");
-            sb.AppendLine("| Source path | `" + EscapeTable(scene?.SourcePath) + "` |");
+            sb.AppendLine("| Source path | `" + EscapeTable(scene != null ? scene.SourcePath : null) + "` |");
             sb.AppendLine("| Source kind | " + (scene != null ? scene.SourceKind.ToString() : "null") + " |");
             sb.AppendLine("| Schema version | " + (scene != null ? scene.SchemaVersion.ToString() : "-" ) + " |");
+            sb.AppendLine("| JSON Bridge detected | " + Bool(IsJsonBridgeScene(scene)) + " |");
             sb.AppendLine("| Imported root | `" + EscapeTable(importedRootName ?? "") + "` |");
-            sb.AppendLine("| Node count | " + (scene?.Nodes?.Count ?? 0) + " |");
-            sb.AppendLine("| Connection count | " + (scene?.Connections?.Count ?? 0) + " |");
-            sb.AppendLine("| Raw statement count | " + (scene?.RawStatements?.Count ?? 0) + " |");
-            sb.AppendLine("| Warnings | " + (log?.Warnings?.Count ?? 0) + " |");
-            sb.AppendLine("| Errors | " + (log?.Errors?.Count ?? 0) + " |");
+            sb.AppendLine("| Node count | " + (scene != null && scene.Nodes != null ? scene.Nodes.Count : 0) + " |");
+            sb.AppendLine("| Connection count | " + (scene != null && scene.Connections != null ? scene.Connections.Count : 0) + " |");
+            sb.AppendLine("| Raw statement count | " + (scene != null && scene.RawStatements != null ? scene.RawStatements.Count : 0) + " |");
+            sb.AppendLine("| Warnings | " + (log != null && log.Warnings != null ? log.Warnings.Count : 0) + " |");
+            sb.AppendLine("| Errors | " + (log != null && log.Errors != null ? log.Errors.Count : 0) + " |");
             sb.AppendLine();
         }
 
@@ -97,17 +99,53 @@ namespace MayaImporter.Core
             sb.AppendLine();
             sb.AppendLine("| Evidence | Value |");
             sb.AppendLine("|---|---|");
-            sb.AppendLine("| SHA-256 | `" + EscapeTable(scene?.RawSha256) + "` |");
-            sb.AppendLine("| Raw ASCII chars | " + (scene?.RawAsciiText != null ? scene.RawAsciiText.Length.ToString() : "0") + " |");
-            sb.AppendLine("| Raw binary bytes | " + (scene?.RawBinaryBytes != null ? scene.RawBinaryBytes.Length.ToString() : "0") + " |");
-            sb.AppendLine("| .mb embedded ASCII parsed | " + Bool(scene?.MbEmbeddedAsciiParsed ?? false) + " |");
-            sb.AppendLine("| .mb embedded ASCII statements | " + (scene?.MbExtractedAsciiStatementCount ?? 0) + " |");
-            sb.AppendLine("| .mb embedded ASCII confidence | " + (scene?.MbExtractedAsciiConfidence ?? 0) + " |");
-            sb.AppendLine("| .mb null-terminated statements | " + (scene?.MbNullTerminatedStatementCount ?? 0) + " |");
-            sb.AppendLine("| .mb null-terminated score | " + (scene?.MbNullTerminatedScore ?? 0) + " |");
-            sb.AppendLine("| .mb chunk placeholders used | " + Bool(scene?.MbUsedChunkPlaceholders ?? false) + " |");
-            sb.AppendLine("| .mb string table entries | " + (scene?.MbStringTable?.Count ?? 0) + " |");
-            sb.AppendLine("| .mb mesh hints | " + (scene?.MbMeshHints?.Count ?? 0) + " |");
+            sb.AppendLine("| SHA-256 | `" + EscapeTable(scene != null ? scene.RawSha256 : null) + "` |");
+            sb.AppendLine("| Raw ASCII chars | " + (scene != null && scene.RawAsciiText != null ? scene.RawAsciiText.Length.ToString() : "0") + " |");
+            sb.AppendLine("| Raw binary bytes | " + (scene != null && scene.RawBinaryBytes != null ? scene.RawBinaryBytes.Length.ToString() : "0") + " |");
+            sb.AppendLine("| .mb embedded ASCII parsed | " + Bool(scene != null && scene.MbEmbeddedAsciiParsed) + " |");
+            sb.AppendLine("| .mb embedded ASCII statements | " + (scene != null ? scene.MbExtractedAsciiStatementCount : 0) + " |");
+            sb.AppendLine("| .mb embedded ASCII confidence | " + (scene != null ? scene.MbExtractedAsciiConfidence : 0) + " |");
+            sb.AppendLine("| .mb null-terminated statements | " + (scene != null ? scene.MbNullTerminatedStatementCount : 0) + " |");
+            sb.AppendLine("| .mb null-terminated score | " + (scene != null ? scene.MbNullTerminatedScore : 0) + " |");
+            sb.AppendLine("| .mb chunk placeholders used | " + Bool(scene != null && scene.MbUsedChunkPlaceholders) + " |");
+            sb.AppendLine("| .mb string table entries | " + (scene != null && scene.MbStringTable != null ? scene.MbStringTable.Count : 0) + " |");
+            sb.AppendLine("| .mb mesh hints | " + (scene != null && scene.MbMeshHints != null ? scene.MbMeshHints.Count : 0) + " |");
+            sb.AppendLine();
+        }
+
+        private static void AppendJsonBridgeOverview(StringBuilder sb, MayaSceneData scene)
+        {
+            sb.AppendLine("## 3. JSON Bridge overview");
+            sb.AppendLine();
+
+            if (!IsJsonBridgeScene(scene))
+            {
+                sb.AppendLine("This import does not appear to be from the Maya Exporter JSON Bridge.");
+                sb.AppendLine();
+                return;
+            }
+
+            JsonBridgeStats stats = BuildJsonBridgeStats(scene);
+            sb.AppendLine("| Item | Count / Value |");
+            sb.AppendLine("|---|---:|");
+            sb.AppendLine("| Exporter JSON schemaVersion | " + (stats.ExporterSchemaVersion >= 0 ? stats.ExporterSchemaVersion.ToString() : "unknown") + " |");
+            sb.AppendLine("| Transform nodes | " + stats.TransformCount + " |");
+            sb.AppendLine("| Mesh nodes | " + stats.MeshCount + " |");
+            sb.AppendLine("| Total subMeshes | " + stats.SubMeshCount + " |");
+            sb.AppendLine("| Materials | " + stats.MaterialCount + " |");
+            sb.AppendLine("| Textures | " + stats.TextureCount + " |");
+            sb.AppendLine("| Cameras | " + stats.CameraCount + " |");
+            sb.AppendLine("| Lights | " + stats.LightCount + " |");
+            sb.AppendLine("| Joints | " + stats.JointCount + " |");
+            sb.AppendLine("| Skin-enabled meshes | " + stats.SkinMeshCount + " |");
+            sb.AppendLine("| Total skin joints referenced by meshes | " + stats.SkinJointReferenceCount + " |");
+            sb.AppendLine("| BlendShape-enabled meshes | " + stats.BlendShapeMeshCount + " |");
+            sb.AppendLine("| Total BlendShape targets | " + stats.BlendShapeTargetCount + " |");
+            sb.AppendLine("| JSON animation curves | " + stats.JsonAnimationCurveCount + " |");
+            sb.AppendLine("| Constraint-baked animation curves | " + stats.BakedConstraintCurveCount + " |");
+            sb.AppendLine("| Constraint metadata nodes | " + stats.ConstraintNodeCount + " |");
+            sb.AppendLine();
+            sb.AppendLine("JSON Bridge counts are derived from `MayaSceneData` records produced by `MayaUnityJsonSceneConverter`. They are intended as validation evidence for the exporter/importer bridge path.");
             sb.AppendLine();
         }
 
@@ -121,7 +159,7 @@ namespace MayaImporter.Core
             int constraintLike = CountNodes(scene, IsConstraintLike);
             int unknownLike = CountNodes(scene, IsUnsupportedOrGeneric);
 
-            sb.AppendLine("## 3. Coverage overview");
+            sb.AppendLine("## 4. Coverage overview");
             sb.AppendLine();
             sb.AppendLine("| Category | Count | Notes |");
             sb.AppendLine("|---|---:|---|");
@@ -139,12 +177,12 @@ namespace MayaImporter.Core
 
         private static void AppendNodeTypeBreakdown(StringBuilder sb, MayaSceneData scene, int maxEntries)
         {
-            sb.AppendLine("## 4. Node type breakdown");
+            sb.AppendLine("## 5. Node type breakdown");
             sb.AppendLine();
             sb.AppendLine("| Node type | Count |");
             sb.AppendLine("|---|---:|");
 
-            var map = scene?.CountNodeTypes() ?? new Dictionary<string, int>();
+            var map = scene != null ? scene.CountNodeTypes() : new Dictionary<string, int>();
             int cap = maxEntries <= 0 ? 256 : maxEntries;
             foreach (var kv in map.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal).Take(cap))
                 sb.AppendLine("| `" + EscapeTable(kv.Key) + "` | " + kv.Value + " |");
@@ -157,25 +195,27 @@ namespace MayaImporter.Core
 
         private static void AppendProvenanceBreakdown(StringBuilder sb, MayaSceneData scene)
         {
-            sb.AppendLine("## 5. Node provenance breakdown");
+            sb.AppendLine("## 6. Node provenance breakdown");
             sb.AppendLine();
             sb.AppendLine("| Provenance | Count |");
             sb.AppendLine("|---|---:|");
 
             var map = new Dictionary<MayaNodeProvenance, int>();
-            if (scene?.Nodes != null)
+            if (scene != null && scene.Nodes != null)
             {
                 foreach (var n in scene.Nodes.Values)
                 {
                     var p = n != null ? n.Provenance : MayaNodeProvenance.Unknown;
-                    map.TryGetValue(p, out int c);
+                    int c;
+                    map.TryGetValue(p, out c);
                     map[p] = c + 1;
                 }
             }
 
             foreach (MayaNodeProvenance p in Enum.GetValues(typeof(MayaNodeProvenance)))
             {
-                map.TryGetValue(p, out int c);
+                int c;
+                map.TryGetValue(p, out c);
                 sb.AppendLine("| " + p + " | " + c + " |");
             }
             sb.AppendLine();
@@ -183,16 +223,16 @@ namespace MayaImporter.Core
 
         private static void AppendUnsupportedNodes(StringBuilder sb, MayaSceneData scene, int maxEntries)
         {
-            sb.AppendLine("## 6. Unsupported / generic-risk nodes");
+            sb.AppendLine("## 7. Unsupported / generic-risk nodes");
             sb.AppendLine();
             sb.AppendLine("These nodes should be reviewed when deciding whether an import is production-ready.");
             sb.AppendLine();
-            sb.AppendLine("| Node | Type | Provenance |");
-            sb.AppendLine("|---|---|---|");
+            sb.AppendLine("| Node | Type | Provenance | Detail |");
+            sb.AppendLine("|---|---|---|---|");
 
             int cap = maxEntries <= 0 ? 256 : maxEntries;
             int count = 0;
-            if (scene?.Nodes != null)
+            if (scene != null && scene.Nodes != null)
             {
                 foreach (var n in scene.Nodes.Values
                     .Where(IsUnsupportedOrGeneric)
@@ -200,42 +240,42 @@ namespace MayaImporter.Core
                     .ThenBy(x => x.Name ?? "", StringComparer.Ordinal))
                 {
                     if (count >= cap) break;
-                    sb.AppendLine("| `" + EscapeTable(n.Name) + "` | `" + EscapeTable(n.NodeType) + "` | " + n.Provenance + " |");
+                    sb.AppendLine("| `" + EscapeTable(n.Name) + "` | `" + EscapeTable(n.NodeType) + "` | " + n.Provenance + " | `" + EscapeTable(n.ProvenanceDetail) + "` |");
                     count++;
                 }
             }
 
-            if (count == 0) sb.AppendLine("| - | - | - |");
+            if (count == 0) sb.AppendLine("| - | - | - | - |");
             sb.AppendLine();
         }
 
         private static void AppendStructuredCommandCounts(StringBuilder sb, MayaSceneData scene)
         {
-            sb.AppendLine("## 7. Structured command counts");
+            sb.AppendLine("## 8. Structured command counts");
             sb.AppendLine();
             sb.AppendLine("| Command / data | Count |");
             sb.AppendLine("|---|---:|");
-            sb.AppendLine("| fileInfo | " + (scene?.FileInfo?.Count ?? 0) + " |");
-            sb.AppendLine("| requires | " + (scene?.Requires?.Count ?? 0) + " |");
-            sb.AppendLine("| workspace rules | " + (scene?.WorkspaceRules?.Count ?? 0) + " |");
-            sb.AppendLine("| namespace ops | " + (scene?.NamespaceOps?.Count ?? 0) + " |");
-            sb.AppendLine("| setKeyframe | " + (scene?.SetKeyframes?.Count ?? 0) + " |");
-            sb.AppendLine("| setDrivenKeyframe | " + (scene?.DrivenKeyframes?.Count ?? 0) + " |");
-            sb.AppendLine("| animLayer | " + (scene?.AnimLayers?.Count ?? 0) + " |");
-            sb.AppendLine("| connectDynamic | " + (scene?.ConnectDynamics?.Count ?? 0) + " |");
-            sb.AppendLine("| scriptNode | " + (scene?.ScriptNodes?.Count ?? 0) + " |");
-            sb.AppendLine("| evalDeferred | " + (scene?.EvalDeferred?.Count ?? 0) + " |");
-            sb.AppendLine("| expression | " + (scene?.Expressions?.Count ?? 0) + " |");
+            sb.AppendLine("| fileInfo | " + (scene != null && scene.FileInfo != null ? scene.FileInfo.Count : 0) + " |");
+            sb.AppendLine("| requires | " + (scene != null && scene.Requires != null ? scene.Requires.Count : 0) + " |");
+            sb.AppendLine("| workspace rules | " + (scene != null && scene.WorkspaceRules != null ? scene.WorkspaceRules.Count : 0) + " |");
+            sb.AppendLine("| namespace ops | " + (scene != null && scene.NamespaceOps != null ? scene.NamespaceOps.Count : 0) + " |");
+            sb.AppendLine("| setKeyframe | " + (scene != null && scene.SetKeyframes != null ? scene.SetKeyframes.Count : 0) + " |");
+            sb.AppendLine("| setDrivenKeyframe | " + (scene != null && scene.DrivenKeyframes != null ? scene.DrivenKeyframes.Count : 0) + " |");
+            sb.AppendLine("| animLayer | " + (scene != null && scene.AnimLayers != null ? scene.AnimLayers.Count : 0) + " |");
+            sb.AppendLine("| connectDynamic | " + (scene != null && scene.ConnectDynamics != null ? scene.ConnectDynamics.Count : 0) + " |");
+            sb.AppendLine("| scriptNode | " + (scene != null && scene.ScriptNodes != null ? scene.ScriptNodes.Count : 0) + " |");
+            sb.AppendLine("| evalDeferred | " + (scene != null && scene.EvalDeferred != null ? scene.EvalDeferred.Count : 0) + " |");
+            sb.AppendLine("| expression | " + (scene != null && scene.Expressions != null ? scene.Expressions.Count : 0) + " |");
             sb.AppendLine();
         }
 
         private static void AppendLog(StringBuilder sb, MayaImportLog log)
         {
-            sb.AppendLine("## 8. Import log");
+            sb.AppendLine("## 9. Import log");
             sb.AppendLine();
-            AppendLogList(sb, "Errors", log?.Errors);
-            AppendLogList(sb, "Warnings", log?.Warnings);
-            AppendLogList(sb, "Infos", log?.Infos);
+            AppendLogList(sb, "Errors", log != null ? log.Errors : null);
+            AppendLogList(sb, "Warnings", log != null ? log.Warnings : null);
+            AppendLogList(sb, "Infos", log != null ? log.Infos : null);
         }
 
         private static void AppendLogList(StringBuilder sb, string title, List<string> items)
@@ -257,85 +297,212 @@ namespace MayaImporter.Core
 
         private static void AppendValidationChecklist(StringBuilder sb, MayaSceneData scene)
         {
-            sb.AppendLine("## 9. Validation checklist");
+            bool json = IsJsonBridgeScene(scene);
+            JsonBridgeStats stats = json ? BuildJsonBridgeStats(scene) : new JsonBridgeStats();
+
+            sb.AppendLine("## 10. Validation checklist");
             sb.AppendLine();
             sb.AppendLine("| Check | Result |");
             sb.AppendLine("|---|---|");
-            sb.AppendLine("| Source hash exists | " + Pass(!string.IsNullOrEmpty(scene?.RawSha256)) + " |");
-            sb.AppendLine("| Nodes discovered | " + Pass((scene?.Nodes?.Count ?? 0) > 0) + " |");
-            sb.AppendLine("| Connections discovered | " + Pass((scene?.Connections?.Count ?? 0) > 0) + " |");
+            sb.AppendLine("| Source hash exists | " + Pass(scene != null && !string.IsNullOrEmpty(scene.RawSha256)) + " |");
+            sb.AppendLine("| Nodes discovered | " + Pass(scene != null && scene.Nodes != null && scene.Nodes.Count > 0) + " |");
             sb.AppendLine("| Has transform-like nodes | " + Pass(CountNodes(scene, IsTransformLike) > 0) + " |");
             sb.AppendLine("| Has geometry-like nodes | " + Pass(CountNodes(scene, IsGeometryLike) > 0) + " |");
             sb.AppendLine("| Has material-like nodes | " + Pass(CountNodes(scene, IsMaterialLike) > 0) + " |");
+            sb.AppendLine("| JSON Bridge sample has mesh data | " + (json ? Pass(stats.MeshCount > 0) : "Not JSON Bridge") + " |");
+            sb.AppendLine("| JSON Bridge sample has subMesh data | " + (json ? Pass(stats.SubMeshCount > 0) : "Not JSON Bridge") + " |");
+            sb.AppendLine("| JSON Bridge sample has BlendShape data | " + (json ? Pass(stats.BlendShapeTargetCount > 0) : "Not JSON Bridge") + " |");
+            sb.AppendLine("| JSON Bridge sample has animation data | " + (json ? Pass(stats.JsonAnimationCurveCount > 0) : "Not JSON Bridge") + " |");
+            sb.AppendLine("| JSON Bridge sample has constraint bake trace | " + (json ? Pass(stats.BakedConstraintCurveCount > 0 || stats.ConstraintNodeCount > 0) : "Not JSON Bridge") + " |");
             sb.AppendLine("| Unsupported/generic nodes need review | " + (((CountNodes(scene, IsUnsupportedOrGeneric) > 0) ? "Review required" : "No obvious generic-risk nodes")) + " |");
             sb.AppendLine();
         }
 
         private static void AppendDisclaimer(StringBuilder sb)
         {
-            sb.AppendLine("## 10. Interpretation");
+            sb.AppendLine("## 11. Interpretation");
             sb.AppendLine();
             sb.AppendLine("This report separates **source discovery** from **Unity behavior parity**.");
             sb.AppendLine();
             sb.AppendLine("- A node listed in this report means the importer discovered and preserved source evidence for it.");
             sb.AppendLine("- A reconstructed Unity object means the builder created an inspectable GameObject/component representation.");
+            sb.AppendLine("- JSON Bridge counts prove that bridge data was parsed and represented in `MayaSceneData`; visual or runtime parity still requires Unity scene inspection.");
             sb.AppendLine("- Full Maya runtime behavior, shader parity, rig evaluation, deformer evaluation, and plugin-specific behavior require explicit validation per sample scene.");
             sb.AppendLine();
         }
 
+        private static JsonBridgeStats BuildJsonBridgeStats(MayaSceneData scene)
+        {
+            var s = new JsonBridgeStats();
+            s.ExporterSchemaVersion = ExtractJsonInt(scene != null ? scene.RawAsciiText : null, "schemaVersion");
+            if (scene == null || scene.Nodes == null) return s;
+
+            foreach (var node in scene.Nodes.Values)
+            {
+                if (node == null) continue;
+                string type = node.NodeType ?? string.Empty;
+                if (Eq(type, "transform")) s.TransformCount++;
+                if (Eq(type, "mesh"))
+                {
+                    s.MeshCount++;
+                    int sub = GetIntAttr(node, ".subMeshCount");
+                    int blends = GetIntAttr(node, ".blendShapeCount");
+                    int skinJoints = GetIntAttr(node, ".skinJointCount");
+                    s.SubMeshCount += sub;
+                    s.BlendShapeTargetCount += blends;
+                    s.SkinJointReferenceCount += skinJoints;
+                    if (blends > 0) s.BlendShapeMeshCount++;
+                    if (skinJoints > 0) s.SkinMeshCount++;
+                }
+                if (IsMaterialLike(node)) s.MaterialCount++;
+                if (Eq(type, "file")) s.TextureCount++;
+                if (Eq(type, "camera")) s.CameraCount++;
+                if (Contains(type, "Light")) s.LightCount++;
+                if (Eq(type, "joint")) s.JointCount++;
+                if (Eq(type, "animCurveJson"))
+                {
+                    s.JsonAnimationCurveCount++;
+                    string attr = GetStringAttr(node, ".attribute");
+                    if (!string.IsNullOrEmpty(attr) && attr.StartsWith("bakedConstraint.", StringComparison.Ordinal))
+                        s.BakedConstraintCurveCount++;
+                }
+                if (IsConstraintLike(node)) s.ConstraintNodeCount++;
+            }
+
+            return s;
+        }
+
+        private sealed class JsonBridgeStats
+        {
+            public int ExporterSchemaVersion = -1;
+            public int TransformCount;
+            public int MeshCount;
+            public int SubMeshCount;
+            public int MaterialCount;
+            public int TextureCount;
+            public int CameraCount;
+            public int LightCount;
+            public int JointCount;
+            public int SkinMeshCount;
+            public int SkinJointReferenceCount;
+            public int BlendShapeMeshCount;
+            public int BlendShapeTargetCount;
+            public int JsonAnimationCurveCount;
+            public int BakedConstraintCurveCount;
+            public int ConstraintNodeCount;
+        }
+
         private static int CountNodes(MayaSceneData scene, Func<NodeRecord, bool> predicate)
         {
-            if (scene?.Nodes == null || predicate == null) return 0;
+            if (scene == null || scene.Nodes == null || predicate == null) return 0;
             int count = 0;
             foreach (var n in scene.Nodes.Values)
                 if (n != null && predicate(n)) count++;
             return count;
         }
 
+        private static bool IsJsonBridgeScene(MayaSceneData scene)
+        {
+            if (scene == null) return false;
+            if (!string.IsNullOrEmpty(scene.SourcePath) && string.Equals(Path.GetExtension(scene.SourcePath), ".json", StringComparison.OrdinalIgnoreCase)) return true;
+            if (!string.IsNullOrEmpty(scene.RawAsciiText))
+            {
+                string trimmed = scene.RawAsciiText.TrimStart();
+                if (trimmed.StartsWith("{", StringComparison.Ordinal) && trimmed.IndexOf("\"schemaVersion\"", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            if (scene.Nodes != null)
+            {
+                foreach (var n in scene.Nodes.Values)
+                {
+                    if (n != null && !string.IsNullOrEmpty(n.ProvenanceDetail) && n.ProvenanceDetail.StartsWith("MayaExporterJson:", StringComparison.Ordinal)) return true;
+                }
+            }
+            return false;
+        }
+
         private static bool IsTransformLike(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
-            return Eq(t, "transform") || Eq(t, "joint") || (n?.Name ?? "").Contains("|");
+            string t = n != null ? (n.NodeType ?? "") : "";
+            return Eq(t, "transform") || Eq(t, "joint") || ((n != null ? n.Name : "") ?? "").Contains("|");
         }
 
         private static bool IsGeometryLike(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
+            string t = n != null ? (n.NodeType ?? "") : "";
             return Eq(t, "mesh") || Eq(t, "nurbsCurve") || Eq(t, "nurbsSurface") || Contains(t, "shape") || Contains(t, "geometry");
         }
 
         private static bool IsMaterialLike(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
+            string t = n != null ? (n.NodeType ?? "") : "";
             return Eq(t, "shadingEngine") || Eq(t, "lambert") || Eq(t, "phong") || Eq(t, "blinn") || Eq(t, "file") || Contains(t, "shader") || Contains(t, "texture") || Contains(t, "surface") || Contains(t, "bump") || Contains(t, "ramp") || Contains(t, "remap");
         }
 
         private static bool IsAnimationLike(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
+            string t = n != null ? (n.NodeType ?? "") : "";
             return t.StartsWith("animCurve", StringComparison.OrdinalIgnoreCase) || Contains(t, "anim");
         }
 
         private static bool IsRigLike(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
+            string t = n != null ? (n.NodeType ?? "") : "";
             return Eq(t, "skinCluster") || Eq(t, "blendShape") || Eq(t, "cluster") || Eq(t, "lattice") || Contains(t, "deformer") || Contains(t, "joint");
         }
 
         private static bool IsConstraintLike(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
+            string t = n != null ? (n.NodeType ?? "") : "";
             return Contains(t, "constraint") || Contains(t, "ik") || Contains(t, "motionPath");
         }
 
         private static bool IsUnsupportedOrGeneric(NodeRecord n)
         {
-            string t = n?.NodeType ?? "";
+            string t = n != null ? (n.NodeType ?? "") : "";
             if (string.IsNullOrEmpty(t)) return true;
             if (Eq(t, "unknown") || Eq(t, "unknownType")) return true;
             if (Contains(t, "placeholder")) return true;
             if (n != null && (n.Provenance == MayaNodeProvenance.MbChunkPlaceholder || n.Provenance == MayaNodeProvenance.MbHeuristic)) return true;
             return false;
+        }
+
+        private static int GetIntAttr(NodeRecord node, string key)
+        {
+            if (node == null || node.Attributes == null || string.IsNullOrEmpty(key)) return 0;
+            RawAttributeValue attr;
+            if (!node.Attributes.TryGetValue(key, out attr) || attr == null) return 0;
+            int i;
+            if (attr.TryGetInt(out i)) return i;
+            if (attr.ValueTokens != null && attr.ValueTokens.Count > 0 && int.TryParse(attr.ValueTokens[0], out i)) return i;
+            return 0;
+        }
+
+        private static string GetStringAttr(NodeRecord node, string key)
+        {
+            if (node == null || node.Attributes == null || string.IsNullOrEmpty(key)) return string.Empty;
+            RawAttributeValue attr;
+            if (!node.Attributes.TryGetValue(key, out attr) || attr == null) return string.Empty;
+            string[] values;
+            if (attr.TryGetStringArray(out values) && values != null && values.Length > 0) return values[0] ?? string.Empty;
+            if (attr.ValueTokens != null && attr.ValueTokens.Count > 0) return attr.ValueTokens[0] ?? string.Empty;
+            return string.Empty;
+        }
+
+        private static int ExtractJsonInt(string json, string field)
+        {
+            if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(field)) return -1;
+            string needle = "\"" + field + "\"";
+            int p = json.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+            if (p < 0) return -1;
+            int colon = json.IndexOf(':', p + needle.Length);
+            if (colon < 0) return -1;
+            int i = colon + 1;
+            while (i < json.Length && char.IsWhiteSpace(json[i])) i++;
+            int start = i;
+            while (i < json.Length && (char.IsDigit(json[i]) || json[i] == '-')) i++;
+            if (i <= start) return -1;
+            int value;
+            return int.TryParse(json.Substring(start, i - start), out value) ? value : -1;
         }
 
         private static string ResolveReportFolder(string configured)
@@ -353,10 +520,10 @@ namespace MayaImporter.Core
             return s.Replace(' ', '_');
         }
 
-        private static bool Eq(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-        private static bool Contains(string a, string b) => !string.IsNullOrEmpty(a) && a.IndexOf(b, StringComparison.OrdinalIgnoreCase) >= 0;
-        private static string Bool(bool v) => v ? "Yes" : "No";
-        private static string Pass(bool v) => v ? "Pass" : "Fail";
+        private static bool Eq(string a, string b) { return string.Equals(a, b, StringComparison.OrdinalIgnoreCase); }
+        private static bool Contains(string a, string b) { return !string.IsNullOrEmpty(a) && a.IndexOf(b, StringComparison.OrdinalIgnoreCase) >= 0; }
+        private static string Bool(bool v) { return v ? "Yes" : "No"; }
+        private static string Pass(bool v) { return v ? "Pass" : "Fail"; }
 
         private static string EscapeTable(string s)
         {
