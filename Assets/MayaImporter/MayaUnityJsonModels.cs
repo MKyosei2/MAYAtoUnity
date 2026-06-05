@@ -1,4 +1,4 @@
-// MAYAIMPORTER_PATCH_V5: JSON bridge data models
+// MAYAIMPORTER_PATCH_V6: JSON bridge data models for geometry/material/camera/light/animation
 using System;
 
 namespace MayaImporter.Core
@@ -18,6 +18,7 @@ namespace MayaImporter.Core
         public MayaUnityExportCamera[] cameras;
         public MayaUnityExportLight[] lights;
         public MayaUnityExportJoint[] joints;
+        public MayaUnityExportAnimationCurve[] animations;
         public MayaUnityExportUnsupported[] unsupported;
     }
 
@@ -69,8 +70,9 @@ namespace MayaImporter.Core
         public string name;
         public string type;
         public string uuid;
-        public string color;
-        public string transparency;
+        public float[] color;
+        public float[] transparency;
+        public string diffuseTexture;
     }
 
     [Serializable]
@@ -87,6 +89,8 @@ namespace MayaImporter.Core
     public sealed class MayaUnityExportCamera : MayaUnityExportNode
     {
         public float focalLength;
+        public float horizontalFilmAperture;
+        public float verticalFilmAperture;
         public float nearClipPlane;
         public float farClipPlane;
     }
@@ -94,14 +98,27 @@ namespace MayaImporter.Core
     [Serializable]
     public sealed class MayaUnityExportLight : MayaUnityExportNode
     {
-        public string color;
+        public float[] color;
         public float intensity;
+        public float coneAngle;
+        public float penumbraAngle;
+        public float dropoff;
     }
 
     [Serializable]
     public sealed class MayaUnityExportJoint : MayaUnityExportTransform
     {
         public float[] jointOrient;
+    }
+
+    [Serializable]
+    public sealed class MayaUnityExportAnimationCurve
+    {
+        public string targetPath;
+        public string attribute;
+        public string unityProperty;
+        public float[] times;
+        public float[] values;
     }
 
     [Serializable]
