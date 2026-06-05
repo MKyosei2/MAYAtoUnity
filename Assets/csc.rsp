@@ -1,5 +1,1 @@
-# MAYAtoUnity preserves many Maya attribute names on generated Unity components.
-# Some preserved Maya names, such as enabled/camera/particleSystem/runInEditMode,
-# intentionally collide with inherited Unity members and produce CS0108 warnings.
-# These are preservation fields, not Unity API overrides.
 -nowarn:0108
