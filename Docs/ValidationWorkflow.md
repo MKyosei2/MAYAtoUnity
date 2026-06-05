@@ -2,25 +2,31 @@
 
 This document explains how to validate MAYAtoUnity as a portfolio-grade DCC pipeline tool.
 
+MAYAtoUnity currently has two validation paths:
+
+1. Unity-only `.ma/.mb` preservation / recovery validation
+2. Maya Exporter JSON Bridge validation
+
 ---
 
-## What was added for validation
+## What is validated
 
-| Area | Added artifact |
+| Area | Validation artifact |
 |---|---|
 | Import audit | `Assets/MayaImporter/MayaImportReport.cs` |
 | Report options | `MayaImportOptions.GenerateImportReport` and report-related options |
-| Builder fix | `MayaImporter.ImportIntoScene` now calls `UnitySceneBuilder` |
 | Sample validation menu | `Tools/MAYAtoUnity/Validate All Samples` |
-| Single file validation menu | `Tools/MAYAtoUnity/Validate Selected Maya File` |
+| Single Maya file validation | `Tools/MAYAtoUnity/Validate Selected Maya File` |
+| Single exporter JSON validation | `Tools/MAYAtoUnity/Validate Selected Exporter JSON` |
 | Supported scope document | `Docs/SupportedNodes.md` |
 | Maya exporter plan | `Docs/MayaExporterPlan.md` |
-| Maya exporter prototype | `Tools/MayaExporter/maya_to_unity_exporter.py` |
-| Sample `.ma` files | `Samples/SimpleHierarchy.ma`, `Samples/MaterialTexture.ma` |
+| Maya exporter implementation | `Tools/MayaExporter/maya_to_unity_exporter.py` |
+| Maya ASCII samples | `Samples/SimpleHierarchy.ma`, `Samples/MaterialTexture.ma`, `Samples/CameraLight.ma`, `Samples/TransformAnimation.ma`, `Samples/ConstraintSample.ma` |
+| Exporter JSON sample | `Samples/ExporterJson/SimpleMeshMaterialAnimation.json` |
 
 ---
 
-## How to run sample validation
+## How to run all sample validation
 
 1. Open the repository as a Unity project.
 2. Wait for scripts to compile.
@@ -30,26 +36,34 @@ This document explains how to validate MAYAtoUnity as a portfolio-grade DCC pipe
 Tools > MAYAtoUnity > Validate All Samples
 ```
 
-4. Reports will be generated under:
+This scans `Samples/` for:
+
+```text
+.ma
+.mb
+.json
+```
+
+Reports are generated under:
 
 ```text
 Assets/MayaImported/Reports
 ```
 
-5. Review each report for:
+Review each report for:
 
-- node count,
-- connection count,
-- node type breakdown,
-- provenance breakdown,
-- unsupported / generic-risk nodes,
-- warnings,
-- errors,
-- validation checklist results.
+- node count
+- connection count
+- node type breakdown
+- provenance breakdown
+- unsupported / generic-risk nodes
+- warnings
+- errors
+- validation checklist results
 
 ---
 
-## How to validate one file
+## How to validate one Maya file
 
 1. Select a `.ma` or `.mb` file under `Assets/`.
 2. Open:
@@ -60,6 +74,62 @@ Tools > MAYAtoUnity > Validate Selected Maya File
 
 3. Inspect the generated hierarchy and report.
 
+This path validates the Unity-only preservation / recovery importer.
+
+---
+
+## How to validate one exporter JSON file
+
+1. Select an exporter `.json` file under `Assets/` or a project-visible folder.
+2. Open:
+
+```text
+Tools > MAYAtoUnity > Validate Selected Exporter JSON
+```
+
+Recommended sample:
+
+```text
+Samples/ExporterJson/SimpleMeshMaterialAnimation.json
+```
+
+This path validates the JSON Bridge importer.
+
+The sample includes:
+
+- Transform hierarchy
+- Mesh topology
+- Normals
+- UVs
+- SubMesh assignment
+- Face material assignment
+- Materials
+- Camera
+- Light
+- BlendShape deltaVertices
+- Current BlendShape weight
+- Baked constraint-style animation curve
+- Constraint metadata
+
+---
+
+## JSON Bridge validation expectations
+
+When validating `Samples/ExporterJson/SimpleMeshMaterialAnimation.json`, the importer should exercise these systems:
+
+| System | Expected behavior |
+|---|---|
+| JSON parse | `MayaUnityExport` DTO is created via `JsonUtility` |
+| SceneData conversion | Nodes, transforms, mesh metadata, materials, animation curves, constraints are recorded |
+| Unity hierarchy | `JsonRoot`, `JsonMesh`, camera and light objects are generated |
+| Mesh build | Unity `Mesh` is built from vertices / normals / uvs / indices |
+| SubMesh build | Two subMeshes are created from material-specific index lists |
+| Material assignment | `JsonRed` and `JsonBlue` are assigned in subMesh order |
+| BlendShape | `RaiseCorner` frame is added and current weight is applied |
+| Animation | `bakedConstraint.translateY` curve becomes a Unity AnimationClip curve |
+| Constraint trace | `sampleParentConstraint` is recorded as baked to animation |
+| Report | Markdown report is written under `Assets/MayaImported/Reports` |
+
 ---
 
 ## Report interpretation
@@ -69,10 +139,11 @@ The report separates source discovery from Unity behavior parity.
 | Report item | Meaning |
 |---|---|
 | Node count | Source nodes preserved in `MayaSceneData`. |
-| Connection count | Maya plug connections preserved. |
+| Connection count | Maya plug connections or reconstructed bridge links preserved. |
 | Node type breakdown | Which Maya node families were discovered. |
 | Provenance breakdown | How each node was recovered, especially for `.mb`. |
 | Unsupported nodes | Nodes requiring manual review or future implementation. |
+| Import log | Runtime warnings/errors emitted during parse/build/attachment. |
 | Validation checklist | Basic proof that the import produced auditable data. |
 
 ---
@@ -83,23 +154,25 @@ Do not present this as a main portfolio project until the following are true:
 
 - [ ] `Validate All Samples` runs without compiler errors.
 - [ ] Each sample produces an Import Report.
+- [ ] Exporter JSON sample imports without errors.
+- [ ] Mesh sample shows visible geometry in Unity.
+- [ ] SubMesh sample shows multiple material slots.
+- [ ] BlendShape sample creates a SkinnedMeshRenderer and applies current weight.
+- [ ] Animation sample creates an AnimationClip or visible transform animation.
+- [ ] Constraint sample clearly states that behavior is baked, not solver-simulated.
 - [ ] Each sample has a screenshot of the Unity hierarchy.
 - [ ] Each sample has expected node / connection counts documented.
 - [ ] Unsupported nodes are not hidden.
 - [ ] README links to sample reports and screenshots.
-- [ ] At least one material / texture sample is shown.
-- [ ] At least one camera / light sample is shown.
-- [ ] At least one animation or constraint sample is shown, even if partial.
 - [ ] A clear limitation statement is visible.
 
 ---
 
-## Next implementation gates
+## Implementation gates
 
 ### Gate 1: Static scene bridge
 
 - Transform hierarchy
-- Mesh metadata
 - Material metadata
 - Texture paths
 - Camera and light metadata
@@ -107,8 +180,9 @@ Do not present this as a main portfolio project until the following are true:
 
 ### Gate 2: Geometry bridge
 
-- Maya exporter writes vertices, normals, UVs, indices, submesh material mapping.
-- Unity importer converts exported mesh data into Unity Mesh assets.
+- Maya exporter writes vertices, normals, UVs, indices.
+- Unity importer converts exported mesh data into Unity Mesh.
+- SubMesh material mapping is preserved.
 - Mesh sample has before / after screenshot.
 
 ### Gate 3: Rig / animation bridge
@@ -116,9 +190,11 @@ Do not present this as a main portfolio project until the following are true:
 - Joints
 - Bindposes
 - Skin weights
-- BlendShape targets
-- Simple transform animation
-- AnimationClip generation
+- SkinnedMeshRenderer
+- BlendShape delta vertices
+- Current BlendShape weight
+- Transform animation
+- Constraint bake to animation curves
 
 ### Gate 4: Production polish
 
@@ -127,6 +203,21 @@ Do not present this as a main portfolio project until the following are true:
 - Report comparison
 - Golden sample tests
 - CI parser checks
+- Real Maya scene validation set
+
+---
+
+## Known validation risks
+
+Current risks to verify in Unity:
+
+- `Camera.usePhysicalProperties` may need version guards on older Unity versions.
+- `LightType.Area` may need version guards on older Unity versions.
+- `DestroyImmediate` usage should be checked for Editor-only versus play-mode import.
+- Matrix handedness and bindpose orientation need real rig validation.
+- BlendShape extraction currently focuses on `deltaVertices`; normals and tangents are future work.
+- Constraint bake uses frame sampling, not Unity-side solver recreation.
+- JSON paths for external textures depend on whether paths are inside the Unity project.
 
 ---
 
@@ -134,8 +225,17 @@ Do not present this as a main portfolio project until the following are true:
 
 Use this:
 
-> MAYAtoUnity is a preservation-first Maya-to-Unity pipeline tool. It parses `.ma` / `.mb` evidence directly for auditability and also includes the foundation for a Maya-side exporter path. Import results are reconstructed as Unity GameObjects and reported with node counts, connection counts, provenance, unsupported nodes, and validation checklists.
+> MAYAtoUnity is a preservation-first Maya-to-Unity pipeline tool. It includes a Unity-only `.ma/.mb` audit path and a Maya-side JSON exporter path. The JSON Bridge reconstructs hierarchy, mesh topology, subMeshes, materials, cameras, lights, animation curves, constraint-baked transforms, skin weights, bindposes, and blendshape deltas into Unity, while import reports preserve evidence and limitations.
 
-Do not use this yet:
+Do not use this:
 
 > Fully imports every Maya feature into Unity.
+
+Also avoid:
+
+```text
+Maya完全互換
+Unity公式FBXの代替
+あらゆるMayaシーンを完全再現
+全shader / all rig / all deformer完全対応
+```
