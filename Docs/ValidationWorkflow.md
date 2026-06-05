@@ -23,6 +23,7 @@ MAYAtoUnity currently has two validation paths:
 | Maya exporter implementation | `Tools/MayaExporter/maya_to_unity_exporter.py` |
 | Maya ASCII samples | `Samples/SimpleHierarchy.ma`, `Samples/MaterialTexture.ma`, `Samples/CameraLight.ma`, `Samples/TransformAnimation.ma`, `Samples/ConstraintSample.ma` |
 | Exporter JSON sample | `Samples/ExporterJson/SimpleMeshMaterialAnimation.json` |
+| Expected JSON report stats | `Samples/ExporterJson/ExpectedReportStats.md` |
 
 ---
 
@@ -56,6 +57,7 @@ Review each report for:
 - connection count
 - node type breakdown
 - provenance breakdown
+- JSON Bridge overview, when the source is exporter JSON
 - unsupported / generic-risk nodes
 - warnings
 - errors
@@ -93,6 +95,12 @@ Recommended sample:
 Samples/ExporterJson/SimpleMeshMaterialAnimation.json
 ```
 
+Expected report stats:
+
+```text
+Samples/ExporterJson/ExpectedReportStats.md
+```
+
 This path validates the JSON Bridge importer.
 
 The sample includes:
@@ -128,7 +136,7 @@ When validating `Samples/ExporterJson/SimpleMeshMaterialAnimation.json`, the imp
 | BlendShape | `RaiseCorner` frame is added and current weight is applied |
 | Animation | `bakedConstraint.translateY` curve becomes a Unity AnimationClip curve |
 | Constraint trace | `sampleParentConstraint` is recorded as baked to animation |
-| Report | Markdown report is written under `Assets/MayaImported/Reports` |
+| Report | Markdown report includes a JSON Bridge overview table |
 
 ---
 
@@ -138,8 +146,10 @@ The report separates source discovery from Unity behavior parity.
 
 | Report item | Meaning |
 |---|---|
-| Node count | Source nodes preserved in `MayaSceneData`. |
-| Connection count | Maya plug connections or reconstructed bridge links preserved. |
+| Summary | Source path, source kind, schema version, root object, node/log counts. |
+| Source evidence | SHA-256, raw ASCII/binary evidence, `.mb` recovery evidence. |
+| JSON Bridge overview | Exporter schema, mesh/subMesh/material/skin/blendshape/animation/constraint counts for JSON sources. |
+| Coverage overview | Structural feature-family counts. |
 | Node type breakdown | Which Maya node families were discovered. |
 | Provenance breakdown | How each node was recovered, especially for `.mb`. |
 | Unsupported nodes | Nodes requiring manual review or future implementation. |
@@ -155,6 +165,7 @@ Do not present this as a main portfolio project until the following are true:
 - [ ] `Validate All Samples` runs without compiler errors.
 - [ ] Each sample produces an Import Report.
 - [ ] Exporter JSON sample imports without errors.
+- [ ] Exporter JSON report matches `Samples/ExporterJson/ExpectedReportStats.md`.
 - [ ] Mesh sample shows visible geometry in Unity.
 - [ ] SubMesh sample shows multiple material slots.
 - [ ] BlendShape sample creates a SkinnedMeshRenderer and applies current weight.
@@ -211,13 +222,11 @@ Do not present this as a main portfolio project until the following are true:
 
 Current risks to verify in Unity:
 
-- `Camera.usePhysicalProperties` may need version guards on older Unity versions.
-- `LightType.Area` may need version guards on older Unity versions.
-- `DestroyImmediate` usage should be checked for Editor-only versus play-mode import.
 - Matrix handedness and bindpose orientation need real rig validation.
 - BlendShape extraction currently focuses on `deltaVertices`; normals and tangents are future work.
 - Constraint bake uses frame sampling, not Unity-side solver recreation.
 - JSON paths for external textures depend on whether paths are inside the Unity project.
+- Material/shader appearance is approximate and must be visually reviewed.
 
 ---
 
