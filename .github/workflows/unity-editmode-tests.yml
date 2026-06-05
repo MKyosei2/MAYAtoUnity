@@ -13,11 +13,20 @@ jobs:
   editmode-tests:
     name: Unity EditMode tests
     runs-on: ubuntu-latest
+    env:
+      HAS_UNITY_LICENSE: ${{ secrets.UNITY_LICENSE != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Explain Unity test skip
+        if: env.HAS_UNITY_LICENSE != 'true'
+        run: |
+          echo "Unity EditMode tests require UNITY_LICENSE/UNITY_EMAIL/UNITY_PASSWORD secrets."
+          echo "Static portfolio validation still runs on push through portfolio-validation.yml."
+
       - name: Run Unity EditMode tests
+        if: env.HAS_UNITY_LICENSE == 'true'
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -30,7 +39,7 @@ jobs:
 
       - name: Upload Unity test artifacts
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && env.HAS_UNITY_LICENSE == 'true'
         with:
           name: mayatounity-editmode-test-artifacts
           path: unity-test-artifacts
