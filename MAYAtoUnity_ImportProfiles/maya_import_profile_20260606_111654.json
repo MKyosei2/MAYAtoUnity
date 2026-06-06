@@ -1,0 +1,29 @@
+{
+  "sourcePath": "C:\\Users\\kyose\\ドキュメント\\GitHub\\MAYAtoUnity\\Samples\\ExporterJson\\SimpleMeshMaterialGolden.json",
+  "success": true,
+  "totalMilliseconds": 40.64,
+  "cacheStats": {
+    "transformLookups": 2,
+    "transformCacheHits": 2,
+    "transformCacheMisses": 0,
+    "componentLookups": 2,
+    "componentCacheHits": 0,
+    "componentCacheMisses": 2
+  },
+  "stages": [
+    { "name": "json_read", "milliseconds": 0.768, "warnings": 0, "errors": 0, "note": "bytes=2058" },
+    { "name": "json_parse", "milliseconds": 0.081, "warnings": 0, "errors": 0, "note": "schemaVersion=10" },
+    { "name": "schema_validation", "milliseconds": 0.001, "warnings": 0, "errors": 0, "note": "warnings=0 errors=0" },
+    { "name": "scene_conversion", "milliseconds": 0.065, "warnings": 0, "errors": 0, "note": "nodes=3" },
+    { "name": "hierarchy_build", "milliseconds": 0.434, "warnings": 1, "errors": 0, "note": "SimpleMeshMaterialGolden" },
+    { "name": "json_reload_for_runtime_attachment", "milliseconds": 0.533, "warnings": 0, "errors": 0, "note": "ok" },
+    { "name": "context_build", "milliseconds": 0.019, "warnings": 0, "errors": 0, "note": "transformAliases=8" },
+    { "name": "material_build", "milliseconds": 0.112, "warnings": 0, "errors": 0, "note": "materials=1" },
+    { "name": "mesh_skin_blendshape_attach", "milliseconds": 0.247, "warnings": 0, "errors": 0, "note": "Transform lookups=1 hits=1 misses=0 | Component lookups=2 hits=0 misses=2" },
+    { "name": "material_assign", "milliseconds": 0.005, "warnings": 0, "errors": 0, "note": "Transform lookups=2 hits=2 misses=0 | Component lookups=2 hits=0 misses=2" },
+    { "name": "camera_attach", "milliseconds": 0.003, "warnings": 0, "errors": 0, "note": "" },
+    { "name": "light_attach", "milliseconds": 0.001, "warnings": 0, "errors": 0, "note": "" },
+    { "name": "animation_attach", "milliseconds": 0, "warnings": 0, "errors": 0, "note": "" },
+    { "name": "report_write", "milliseconds": 38.371, "warnings": 0, "errors": 0, "note": "" }
+  ]
+}
