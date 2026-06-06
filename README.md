@@ -1,16 +1,43 @@
 # MAYAtoUnity
 
-**MAYAtoUnity** is a Unity Editor / DCC pipeline tool for importing, preserving, validating, and reconstructing Maya scene data inside Unity.
+**MAYAtoUnity** is a Unity Editor / DCC pipeline tool for importing, preserving, validating, profiling, and reconstructing Maya scene data inside Unity.
 
-This project is designed as a **Technical Artist / Tools Programmer portfolio project**. It focuses on a real production problem: moving DCC scene information into a game engine while keeping enough evidence to debug what was imported, what was approximated, and what is currently unsupported.
+This repository is positioned as a **Technical Artist / Tools Programmer portfolio project**. The production problem is simple: teams need to move DCC scene information into a game engine while keeping enough source evidence to debug what was imported, what was approximated, and what is still unsupported.
 
-> Scope note: this is not a full replacement for Autodesk Maya, FBX, or Unity's official import pipeline. The goal is an inspectable, deterministic, validation-oriented bridge for Maya / DCC data.
+> Scope note: this is not a replacement for Autodesk Maya, FBX, or Unity's official import pipeline. The defensible claim is an inspectable, deterministic, validation-oriented Maya / DCC bridge for Unity.
+
+---
+
+## Portfolio summary
+
+```text
+Maya scene data
+  -> Maya-side JSON exporter or Unity-side .ma/.mb preservation path
+  -> intermediate MayaSceneData model
+  -> deterministic Unity hierarchy reconstruction
+  -> mesh / material / texture / camera / light / animation / skin / blendshape attachment
+  -> validation log + import report + profile report
+```
+
+The main value is not only importing data. The important part is **traceability**: source nodes, attributes, fallback paths, unsupported features, warnings, generated Unity objects, and stage timings are recorded so a reviewer can inspect what happened.
+
+---
+
+## Problem / user / output
+
+| Item | Description |
+|---|---|
+| Problem | DCC-to-engine transfer can silently lose information, making imported scenes hard to debug. |
+| Primary user | Technical Artist, Tools Programmer, Pipeline Engineer, Unity developer. |
+| Input | Maya exporter JSON, Maya ASCII `.ma`, best-effort Maya Binary `.mb`. |
+| Output | Unity hierarchy, meshes, renderers, materials, cameras, lights, animation clips, skin / blendshape data, reports. |
+| Safety goal | Unsupported data should be preserved as evidence instead of disappearing silently. |
 
 ---
 
 ## 30-second overview
 
-MAYAtoUnity has two import paths:
+MAYAtoUnity has two import paths.
 
 ```text
 Path A: Exporter JSON Bridge
@@ -19,56 +46,34 @@ Maya scene
   -> exporter JSON
   -> MayaUnityJsonImporter
   -> Unity hierarchy / mesh / material / animation / skin / blendshape / constraint metadata
-  -> Import report + validation log
+  -> import report + validation log + profile report
 
 Path B: Unity-only .ma/.mb preservation
 .ma / .mb file
   -> parser / recovery layer
   -> MayaSceneData
   -> UnitySceneBuilder
-  -> preserved node records, attributes, connections, provenance, and report
+  -> preserved node records, attributes, connections, provenance, fallback records, and report
 ```
-
-The main portfolio value is not only that data can be imported. The important part is that the import process is **traceable**: source nodes, attributes, fallback paths, unsupported information, warnings, and generated Unity objects are recorded for review.
-
----
-
-## What this demonstrates
-
-- Unity Editor tooling
-- DCC pipeline engineering
-- Intermediate scene data model design
-- Deterministic scene reconstruction
-- Mesh topology import
-- SubMesh / material assignment
-- Texture binding
-- Camera / light reconstruction
-- AnimationCurve generation
-- Constraint baking metadata
-- Skin weight / bindpose import
-- BlendShape delta import
-- Import report and validation workflow
-- Best-effort `.mb` preservation / recovery
-- Graceful degradation for unsupported features
 
 ---
 
 ## Reviewer path
 
-For a quick review, start here:
+For a quick review:
 
 ```text
-1. Read this README
-2. Open the Unity project
+1. Read this README.
+2. Open the Unity project.
 3. Run: Tools/MAYAtoUnity/Validate All Samples
-4. Inspect generated import reports
-5. Open Samples/ExporterJson/SimpleMeshMaterialAnimation.json
-6. Review Assets/MayaImporter/MayaUnityJsonImporter.cs
-7. Review Assets/MayaImporter/MayaUnityJsonRuntimeBuilder.cs
-8. Review Docs/ValidationWorkflow.md
+4. Inspect the generated import reports and logs.
+5. Open: Samples/ExporterJson/SimpleMeshMaterialAnimation.json
+6. Review: Assets/MayaImporter/MayaUnityJsonImporter.cs
+7. Review: Assets/MayaImporter/MayaUnityJsonRuntimeBuilder.cs
+8. Review: Docs/ValidationWorkflow.md
 ```
 
-Expected validation entry points:
+Expected Unity menu entry points:
 
 ```text
 Tools/MAYAtoUnity/Validate All Samples
@@ -77,28 +82,30 @@ Tools/MAYAtoUnity/Validate Selected Exporter JSON
 
 ---
 
-## Current JSON Bridge support
+## Implemented JSON Bridge support
 
 | Area | Status | Notes |
 |---|---:|---|
-| Transform hierarchy | Implemented | Builds Unity hierarchy from Maya path / parent path |
-| Mesh topology | Implemented | Reconstructs vertices, normals, UVs, triangle indices |
-| SubMesh | Implemented | Converts face material assignment to Unity submeshes |
-| Material color | Implemented | Supports lambert / phong / blinn / standardSurface-style base color mapping |
-| Texture binding | Implemented | Maps file texture path to `_BaseMap` / `_MainTex` where possible |
-| Camera | Implemented | Preserves focal length and clipping plane metadata |
-| Light | Implemented | Directional / point / spot / area fallback support |
-| Animation curves | Implemented | Converts translate / rotate / scale animCurve data into Unity AnimationClip curves |
-| Constraint metadata | Implemented | Stores constraint nodes and bake status in scene data |
-| Constraint baking | Implemented | Uses baked transform animation rather than reimplementing Maya solvers |
-| Joints | Implemented | Preserves joint hierarchy / jointOrient / matrix metadata |
-| Skin weights | Implemented | Converts top 4 weights per exported vertex into Unity BoneWeight |
-| Bindposes | Implemented | Uses skinCluster bindPreMatrix when available, fallback to joint inverse matrix |
-| SkinnedMeshRenderer | Implemented | Builds skinned renderer when skin data exists |
-| BlendShape deltas | Implemented | Imports sampled delta vertices into Unity blendshape frames |
-| Current BlendShape weight | Implemented | Applies current weight to SkinnedMeshRenderer |
-| Import report | Implemented | Writes source evidence, coverage, unsupported entries, and log output |
-| Validation menu | Implemented | Editor menu for sample import / report generation |
+| Transform hierarchy | Implemented | Builds Unity hierarchy from Maya path / parent path. |
+| Mesh topology | Implemented | Reconstructs vertices, normals, UVs, and triangle indices. |
+| SubMesh assignment | Implemented | Converts face material assignment into Unity submeshes. |
+| Material color | Implemented | Supports lambert / phong / blinn / standardSurface-style base color mapping. |
+| Texture binding | Implemented | Maps file texture paths to `_BaseMap` / `_MainTex` where possible. |
+| Camera | Implemented | Preserves focal length and clipping plane metadata. |
+| Light | Implemented | Directional / point / spot / area fallback support. |
+| Animation curves | Implemented | Converts translate / rotate / scale animCurve data into Unity AnimationClip curves. |
+| Constraint metadata | Implemented | Stores constraint nodes and bake status in scene data. |
+| Constraint baking policy | Implemented | Uses baked transform animation rather than trying to reimplement Maya solvers. |
+| Joints | Implemented | Preserves joint hierarchy / jointOrient / matrix metadata. |
+| Skin weights | Implemented | Converts top 4 weights per exported vertex into Unity BoneWeight. |
+| Bindposes | Implemented | Uses skinCluster bindPreMatrix when available, with joint inverse matrix fallback. |
+| SkinnedMeshRenderer | Implemented | Builds skinned renderer when skin data exists. |
+| BlendShape deltas | Implemented | Imports sampled delta vertices into Unity blendshape frames. |
+| BlendShape weight | Implemented | Applies current weight to SkinnedMeshRenderer. |
+| Schema validation | Implemented | Emits warnings / errors before scene conversion. |
+| Import profiling | Implemented | Records staged import timing and cache statistics. |
+| Import report | Implemented | Writes source evidence, coverage, unsupported entries, and log output. |
+| Validation menu | Implemented | Editor menu for sample import and report generation. |
 
 ---
 
@@ -116,20 +123,11 @@ MAYAtoUnity also preserves Maya ASCII / Maya Binary information without calling 
   -> UnitySceneBuilder
 ```
 
-Preserved data includes:
-
-- node name / node type
-- parent hierarchy
-- UUID
-- raw attributes
-- typed parsed attributes
-- plug connections
-- raw command statements
-- unit information
+Preserved data includes node name, node type, parent hierarchy, UUID, raw attributes, typed parsed attributes, plug connections, raw command statements, and unit information.
 
 ### `.mb` path
 
-`.mb` is handled as best-effort preservation / recovery rather than a full binary Maya parser.
+`.mb` is handled as best-effort preservation / recovery rather than full Maya Binary compatibility.
 
 ```text
 .mb bytes
@@ -146,12 +144,12 @@ Provenance categories are recorded so reviewers can see where each reconstructed
 
 | Provenance | Meaning |
 |---|---|
-| `AsciiCommands` | `.ma` command or exporter JSON source |
-| `MbEmbeddedAscii` | command-like text found inside `.mb` |
-| `MbNullTerminatedAscii` | recovered from null-terminated strings |
-| `MbDeterministicStringTable` | deterministic enumeration from string table |
-| `MbChunkPlaceholder` | placeholder from chunk index |
-| `MbHeuristic` | heuristic reconstruction |
+| `AsciiCommands` | `.ma` command or exporter JSON source. |
+| `MbEmbeddedAscii` | Command-like text found inside `.mb`. |
+| `MbNullTerminatedAscii` | Recovered from null-terminated strings. |
+| `MbDeterministicStringTable` | Deterministic enumeration from string table. |
+| `MbChunkPlaceholder` | Placeholder from chunk index. |
+| `MbHeuristic` | Heuristic reconstruction. |
 
 ---
 
@@ -162,7 +160,7 @@ Assets/MayaImporter/
   MayaImporter.cs                    # public import entry point
   MayaImportOptions.cs               # import configuration
   MayaImportReport.cs                # Markdown report writer
-  MayaUnityJsonImporter.cs           # JSON bridge entry point
+  MayaUnityJsonImporter.cs           # JSON bridge entry point, schema validation, profiling
   MayaUnityJsonModels.cs             # exporter JSON model
   MayaUnityJsonMeshBuilder.cs        # Unity Mesh construction
   MayaUnityJsonRuntimeBuilder.cs     # renderer/material/camera/light/skin/blendshape attachment
@@ -186,34 +184,6 @@ Docs/
   SupportedNodes.md
   MayaExporterPlan.md
   ValidationWorkflow.md
-```
-
----
-
-## Active performance work
-
-A performance branch / PR is being prepared to reduce repeated hierarchy scans during JSON runtime attachment.
-
-Planned / active changes:
-
-- `MayaImportContext` for one import-wide transform/component cache
-- one hierarchy index reused by mesh, skin, blendshape, material, camera, and light stages
-- runtime/editor `.asmdef` split to reduce Assembly-CSharp coupling
-- future import stage timing report
-
-Target evidence to add after Unity validation:
-
-```text
-JSON parse:        xx ms
-Scene conversion:  xx ms
-Hierarchy build:   xx ms
-Mesh build:        xx ms
-Skin bind:         xx ms
-BlendShape bind:   xx ms
-Material assign:   xx ms
-Camera/Light:      xx ms
-Report write:      xx ms
-Total:             xx ms
 ```
 
 ---
@@ -282,7 +252,7 @@ public class MayaJsonImportExample : MonoBehaviour
 
 ### Preservation first
 
-Unsupported or partially supported data should not disappear silently. It is kept as scene data, raw attributes, connections, provenance, warnings, or report entries.
+Unsupported or partially supported data should not disappear silently. It is kept as scene data, raw attributes, connections, provenance, warnings, unsupported feature entries, or report output.
 
 ### Deterministic reconstruction
 
@@ -306,40 +276,39 @@ This project intentionally avoids claiming full Maya compatibility. It is a DCC 
 - BlendShape import is focused on delta vertices; delta normals and delta tangents need further work.
 - Constraint runtime solving is not reimplemented; baked transforms are the preferred path.
 - Animation tangent / interpolation parity needs more validation.
-- Unity compile and runtime validation should be recorded as reproducible reports.
+- More committed sample reports, screenshots, and GIFs would improve portfolio review speed.
 
 ---
 
-## Roadmap
+## Next improvements
 
 ### Short term
 
-- Merge and validate import context cache / `.asmdef` performance branch
-- Add import stage profiler and cache hit/miss statistics
-- Add more golden exporter JSON samples
-- Save validation reports under `Docs/Reports/`
-- Add README screenshots / GIFs
+- Add committed sample reports under `Docs/Reports/`.
+- Add README screenshots / GIFs showing import before and after.
+- Add more golden exporter JSON samples for skin, blendshape, animation, and constraints.
+- Record real import-stage timings from Unity validation runs.
 
 ### Mid term
 
-- Namespace / reference support
-- Texture copy/import pipeline
-- More rig / skin / blendshape validation scenes
-- Automated Unity Editor tests
-- CI regression checks
+- Namespace / reference support.
+- Texture copy/import pipeline.
+- More rig / skin / blendshape validation scenes.
+- Automated Unity Editor tests.
+- CI compile / regression checks where possible.
 
 ### Long term
 
-- Batch import UI
-- Project-wide DCC validation
-- Integration with AssetUtility
-- Portfolio-level Technical Art Pipeline Suite documentation
+- Batch import UI.
+- Project-wide DCC validation.
+- Integration with AssetUtility.
+- Portfolio-level Technical Art Pipeline Suite documentation.
 
 ---
 
 ## Portfolio wording
 
-> Maya / DCC data can be exported to JSON and reconstructed in Unity with hierarchy, mesh topology, submesh assignment, materials, textures, cameras, lights, animation curves, skin weights, bindposes, blendshapes, constraint metadata, validation reports, and fallback handling. I designed the tool as a preservation-first DCC bridge so unsupported data is still traceable rather than silently discarded.
+> Maya / DCC data can be exported to JSON and reconstructed in Unity with hierarchy, mesh topology, submesh assignment, materials, textures, cameras, lights, animation curves, skin weights, bindposes, blendshapes, constraint metadata, validation reports, profiling, and fallback handling. I designed the tool as a preservation-first DCC bridge so unsupported data remains traceable instead of silently disappearing.
 
 Avoid these claims:
 
@@ -359,4 +328,5 @@ Preservation-first Unity importer
 Exporter JSON based deterministic reconstruction
 Validation-oriented DCC pipeline tool
 Constraint baking / Skin / BlendShape aware importer
+Profiled import and report workflow
 ```
