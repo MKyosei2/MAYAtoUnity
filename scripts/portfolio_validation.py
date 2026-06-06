@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Repository-level portfolio validation for MAYAtoUnity.
 
-This script is intentionally dry-run first. It does not mutate Unity assets.
-It checks reviewer-critical files, sample coverage, README honesty, asmdef health,
-golden exporter JSON integrity, and writes Markdown/JSON reports so CI failures are inspectable.
+The validator is intentionally dry-run first. It does not mutate Unity assets.
+It checks reviewer-critical files, sample coverage, README honesty, golden exporter
+JSON integrity, asmdef health, and writes Markdown/JSON reports so CI failures are
+inspectable.
+
+The README check accepts both the older English headings and the newer Japanese
+portfolio-review headings.
 """
 
 from __future__ import annotations
@@ -13,7 +17,7 @@ import json
 import sys
 import time
 import traceback
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, List
 
@@ -54,7 +58,7 @@ class ValidationContext:
         errors: List[str] = []
         try:
             warnings, errors = fn()
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover - CI diagnostic path
             errors.append(f"Unhandled exception: {exc}")
             errors.append(traceback.format_exc())
         elapsed = (time.perf_counter() - start) * 1000.0
@@ -62,6 +66,13 @@ class ValidationContext:
 
     def has_errors(self) -> bool:
         return any(not s.success for s in self.stages)
+
+
+def rel(ctx: ValidationContext, path: Path) -> str:
+    try:
+        return str(path.relative_to(ctx.root)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
 
 
 def require_paths(ctx: ValidationContext) -> tuple[list[str], list[str]]:
@@ -82,9 +93,17 @@ def require_paths(ctx: ValidationContext) -> tuple[list[str], list[str]]:
         "Samples/ExporterJson/SimpleMeshMaterialGolden.json",
         "Samples/Expected/SimpleMeshMaterialGolden.expected.json",
     ]
-    for rel in required:
-        if not (ctx.root / rel).exists():
-            errors.append(f"Missing required path: {rel}")
+    optional = [
+        "Samples/FxPhysicsShowcase.ma",
+        "Docs/Samples/FxPhysicsShowcase.md",
+        "Tools/MayaSamples/create_fx_physics_showcase_scene.py",
+    ]
+    for item in required:
+        if not (ctx.root / item).exists():
+            errors.append(f"Missing required path: {item}")
+    for item in optional:
+        if not (ctx.root / item).exists():
+            warnings.append(f"Optional portfolio sample path not found yet: {item}")
     return warnings, errors
 
 
@@ -93,17 +112,21 @@ def check_readme(ctx: ValidationContext) -> tuple[list[str], list[str]]:
     errors: List[str] = []
     readme = ctx.root / "README.md"
     text = readme.read_text(encoding="utf-8") if readme.exists() else ""
-    required_phrases = [
-        "30-second overview",
-        "Reviewer path",
-        "Current limitations",
-        "Roadmap",
-        "Portfolio wording",
-        "not a full replacement",
+    lower = text.lower()
+
+    required_groups = [
+        ("portfolio summary", ["ポートフォリオ要約", "portfolio summary", "30-second overview"]),
+        ("reviewer path", ["レビュー手順", "reviewer path"]),
+        ("limitations", ["現在の制限", "current limitations"]),
+        ("roadmap / next improvements", ["次の改善", "roadmap", "next improvements"]),
+        ("portfolio wording", ["ポートフォリオ用説明文", "portfolio wording"]),
+        ("honest scope note", ["スコープ注記", "not a full replacement", "代替ではありません"]),
     ]
-    for phrase in required_phrases:
-        if phrase.lower() not in text.lower():
-            errors.append(f"README is missing reviewer/limitation phrase: {phrase}")
+
+    for label, alternatives in required_groups:
+        if not any(token.lower() in lower for token in alternatives):
+            errors.append(f"README is missing reviewer/limitation section: {label}; accepted tokens={alternatives}")
+
     ctx.limitations_status = "README includes explicit limitations" if not errors else "README limitation coverage incomplete"
     return warnings, errors
 
@@ -125,12 +148,12 @@ def check_samples(ctx: ValidationContext) -> tuple[list[str], list[str]]:
         "tool": "MAYAtoUnity",
         "generatedBy": "scripts/portfolio_validation.py",
         "sampleCounts": {"ma": len(ma_files), "mb": len(mb_files), "json": len(json_files)},
-        "samples": [str(p.relative_to(ctx.root)).replace("\\", "/") for p in ma_files + mb_files + json_files],
+        "samples": [rel(ctx, p) for p in ma_files + mb_files + json_files],
     }
     ctx.report_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = ctx.report_dir / "maya_sample_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-    ctx.generated_samples.append(str(manifest_path.relative_to(ctx.root)).replace("\\", "/"))
+    ctx.generated_samples.append(rel(ctx, manifest_path))
     return warnings, errors
 
 
@@ -187,12 +210,12 @@ def validate_golden_json(ctx: ValidationContext) -> tuple[list[str], list[str]]:
             target = expected.get(key) if key == "schemaVersion" else exp.get(key)
             if target is not None and actual != target:
                 errors.append(f"{expected_path.name}: {key} expected {target}, got {actual}")
-        summaries.append({"expected": str(expected_path.relative_to(ctx.root)), "sample": expected["sample"], "checks": checks, "schemaErrors": schema_errors})
+        summaries.append({"expected": rel(ctx, expected_path), "sample": expected["sample"], "checks": checks, "schemaErrors": schema_errors})
 
     summary_path = ctx.report_dir / "maya_golden_validation.json"
     ctx.report_dir.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps({"goldenSamples": summaries}, indent=2, ensure_ascii=False), encoding="utf-8")
-    ctx.generated_samples.append(str(summary_path.relative_to(ctx.root)).replace("\\", "/"))
+    ctx.generated_samples.append(rel(ctx, summary_path))
     return warnings, errors
 
 
@@ -206,10 +229,10 @@ def check_asmdefs(ctx: ValidationContext) -> tuple[list[str], list[str]]:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception as exc:
-            errors.append(f"Invalid asmdef JSON: {path}: {exc}")
+            errors.append(f"Invalid asmdef JSON: {rel(ctx, path)}: {exc}")
             continue
         if not data.get("name"):
-            errors.append(f"asmdef missing name: {path}")
+            errors.append(f"asmdef missing name: {rel(ctx, path)}")
     return warnings, errors
 
 
