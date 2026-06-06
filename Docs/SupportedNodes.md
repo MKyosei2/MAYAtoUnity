@@ -68,6 +68,9 @@ This path uses Unity C# parsers and does not require Maya / Autodesk APIs.
 | `.ma` fileInfo / requires / workspace | Preserved / Reported | metadata retained for audit. |
 | `.ma` namespace / addAttr / deleteAttr / lockNode | Preserved / Reported | structured records or node attributes. |
 | `.ma` setKeyframe / animLayer / expression / scriptNode | Preserved / Reported | not full Maya evaluation. |
+| `.ma` particle / field nodes | Preserved / Reported | particle, emitter, gravityField, turbulenceField, and related connections are source evidence; Unity simulation parity is not claimed. |
+| `.ma` rigid-body nodes | Preserved / Reported | rigidBody / rigidSolver nodes and attributes are retained as physics metadata where present. |
+| `.ma` nDynamics nodes | Preserved / Reported | nucleus, nCloth, nRigid, dynamicConstraint nodes are retained as simulation metadata where present. |
 | `.mb` raw binary | Preserved | bytes and SHA-256 retained. |
 | `.mb` embedded ASCII | Preserved / Recovered | command-like text parsed when confidence is sufficient. |
 | `.mb` null-terminated strings | Preserved / Recovered | best-effort statement reconstruction. |
@@ -85,6 +88,7 @@ This path uses Unity C# parsers and does not require Maya / Autodesk APIs.
 | `Samples/CameraLight.ma` | camera and light nodes reconstructed or reported. |
 | `Samples/TransformAnimation.ma` | setKeyframe / animCurve data preserved and reported. |
 | `Samples/ConstraintSample.ma` | constraint nodes preserved and limitation clearly reported. |
+| `Samples/FxPhysicsShowcase.ma` | 3D model hierarchy, particles, fields, rigidBody metadata, nDynamics nodes, setKeyframe evidence, and unsupported simulation reporting. |
 | `Samples/ExporterJson/SimpleMeshMaterialAnimation.json` | JSON Bridge path: mesh, subMesh, materials, blendshape, animation, constraint metadata. |
 | Future `SkinBlendShape.json` | joint, skinCluster, bindposes, blendShape targets and current weights. |
 | Future `UnsupportedNodes.ma` | unsupported nodes appear in Import Report. |
@@ -115,8 +119,9 @@ Do not claim:
 - Full Arnold / plugin shader parity.
 - Full rig / deformer / animation evaluation parity.
 - Constraint solver parity in Unity.
+- Particle, rigid-body, or nCloth simulation parity in Unity.
 - Replacement for Unity's official FBX workflow.
 
 Preferred claim:
 
-> MAYAtoUnity is a preservation-first Maya-to-Unity pipeline tool. It includes a Unity-only `.ma/.mb` audit path and a Maya-side JSON exporter path. The JSON Bridge reconstructs a defined validation set covering hierarchy, mesh topology, subMeshes, materials, cameras, lights, animation curves, baked constraints, skin weights, bindposes, and blendshape deltas while preserving import evidence in reports.
+> MAYAtoUnity is a preservation-first Maya-to-Unity pipeline tool. It includes a Unity-only `.ma/.mb` audit path and a Maya-side JSON exporter path. The JSON Bridge reconstructs a defined validation set covering hierarchy, mesh topology, subMeshes, materials, cameras, lights, animation curves, baked constraints, skin weights, bindposes, and blendshape deltas while preserving import evidence in reports. The `.ma/.mb` audit path preserves additional DCC evidence such as unsupported particles, fields, rigid-body nodes, and nDynamics metadata instead of silently discarding it.
